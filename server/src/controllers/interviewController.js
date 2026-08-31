@@ -1,5 +1,5 @@
 const Interview = require("../models/Interview");
-const { generateFirstQuestion } = require("../services/geminiService");
+const { generateFirstQuestion, generateNextQuestion, generateInterviewFeedback } = require("../services/geminiService");
 
 // ─── POST /api/interviews ──────────────────────────────────────────────────────
 // Creates a new interview, generates the first question via Gemini,
@@ -132,4 +132,260 @@ const createInterview = async (req, res) => {
   }
 };
 
-module.exports = { createInterview };
+// ─── Helper for Duplicate Checking ──────────────────────────────────────────
+function normalizeQuestion(q) {
+  return q.toLowerCase().trim().replace(/[?!.]/g, "");
+}
+
+// ─── POST /api/interviews/:id/answer ──────────────────────────────────────────
+// Submits a candidate's answer, evaluates interview state, and generates the
+// next question adaptively using Gemini, or ends the interview if limits reached.
+// Requires: JWT authentication
+const submitAnswer = async (req, res) => {
+  try {
+    const interviewId = req.params.id;
+    const { answer } = req.body;
+    const userId = req.user.userId;
+
+    // 1. Validate answer
+    if (!answer || typeof answer !== "string" || answer.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "answer is required and must be a non-empty string",
+      });
+    }
+    if (answer.length > 3000) {
+      return res.status(400).json({
+        success: false,
+        message: "answer is too long (maximum 3000 characters)",
+      });
+    }
+
+    // 2. Find interview & verify ownership
+    const interview = await Interview.findOne({ _id: interviewId, userId });
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found or unauthorized",
+      });
+    }
+
+    // 3. Verify active status
+    if (interview.status !== "in_progress") {
+      return res.status(400).json({
+        success: false,
+        message: "Interview is no longer active",
+      });
+    }
+
+    // 4. Add candidate's answer to conversation
+    interview.conversation.push({
+      role: "candidate",
+      text: answer.trim(),
+    });
+
+    // 5. Check time limits
+    const now = new Date();
+    const elapsedTimeSeconds = (now.getTime() - interview.startedAt.getTime()) / 1000;
+    const maxTimeSeconds = interview.duration * 60;
+    
+    // If time is up, or we already asked max questions before this answer
+    // Note: questionsAsked tracks questions *already asked*, so if questionsAsked >= questionCount, 
+    // the user just answered the final question.
+    if (elapsedTimeSeconds >= maxTimeSeconds || interview.questionsAsked >= interview.questionCount) {
+      // Save the answer but don't generate a new question
+      await interview.save();
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: "ready_to_complete",
+          message: "Interview limit reached (time or questions). Ready for completion.",
+        }
+      });
+    }
+
+    // 6. Generate Next Question via Gemini
+    let nextQData;
+    let attempts = 0;
+    const maxAttempts = 2; // Try once, retry once if duplicate
+
+    // Extract previous questions for duplicate checking
+    const previousQuestions = interview.conversation
+      .filter(msg => msg.role === "interviewer")
+      .map(msg => normalizeQuestion(msg.text));
+
+    while (attempts < maxAttempts) {
+      try {
+        attempts++;
+        nextQData = await generateNextQuestion({
+          resume: interview.resume,
+          role: interview.role,
+          difficulty: interview.difficulty,
+          questionCount: interview.questionCount,
+          questionsAsked: interview.questionsAsked,
+          conversation: interview.conversation,
+        });
+
+        // Duplicate Check
+        const normalizedNew = normalizeQuestion(nextQData.question);
+        if (previousQuestions.includes(normalizedNew)) {
+          if (attempts >= maxAttempts) {
+            throw new Error("Failed to generate a non-duplicate question after max retries");
+          }
+          continue; // Try again
+        }
+        
+        break; // Success!
+      } catch (err) {
+        console.error(`Gemini next question error (attempt ${attempts}):`, err.message);
+        if (attempts >= maxAttempts) {
+          return res.status(502).json({
+            success: false,
+            message: "Unable to generate next interview question",
+          });
+        }
+      }
+    }
+
+    // 7. Save generated question
+    interview.conversation.push({
+      role: "interviewer",
+      text: nextQData.question,
+      topic: nextQData.topic,
+      difficulty: nextQData.difficulty,
+    });
+    
+    interview.questionsAsked += 1;
+    await interview.save();
+
+    // 8. Return response
+    return res.status(200).json({
+      success: true,
+      data: {
+        question: {
+          text: nextQData.question,
+          topic: nextQData.topic,
+          difficulty: nextQData.difficulty,
+        },
+        questionsAsked: interview.questionsAsked,
+        remainingQuestions: interview.questionCount - interview.questionsAsked,
+        decision: nextQData.decision, // useful for frontend debugging/UI
+      },
+    });
+
+  } catch (err) {
+    console.error("Submit answer error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ─── POST /api/interviews/:id/complete ─────────────────────────────────────────
+const completeInterview = async (req, res) => {
+  try {
+    const interviewId = req.params.id;
+    const userId = req.user.userId;
+
+    const interview = await Interview.findOne({ _id: interviewId, userId });
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found or unauthorized" });
+    }
+
+    if (interview.status === "completed" || interview.status === "cancelled") {
+      return res.status(400).json({ success: false, message: "Interview is already ended" });
+    }
+
+    if (interview.conversation.length === 0) {
+      return res.status(400).json({ success: false, message: "No conversation to evaluate" });
+    }
+
+    // Call Gemini BEFORE saving status to DB to avoid inconsistent state on failure
+    let feedback;
+    try {
+      feedback = await generateInterviewFeedback({
+        resume: interview.resume,
+        role: interview.role,
+        difficulty: interview.difficulty,
+        questionCount: interview.questionCount,
+        status: "completed",
+        conversation: interview.conversation,
+      });
+    } catch (err) {
+      console.error("Gemini feedback error:", err.message);
+      return res.status(502).json({ success: false, message: "Unable to generate feedback. Please try again." });
+    }
+
+    // Success! Update DB
+    interview.status = "completed";
+    interview.completedAt = new Date();
+    interview.feedback = feedback;
+    await interview.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Interview completed successfully",
+      data: {
+        status: interview.status,
+        feedback: interview.feedback,
+      },
+    });
+  } catch (err) {
+    console.error("Complete interview error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ─── POST /api/interviews/:id/cancel ───────────────────────────────────────────
+const cancelInterview = async (req, res) => {
+  try {
+    const interviewId = req.params.id;
+    const userId = req.user.userId;
+
+    const interview = await Interview.findOne({ _id: interviewId, userId });
+    if (!interview) {
+      return res.status(404).json({ success: false, message: "Interview not found or unauthorized" });
+    }
+
+    if (interview.status === "completed" || interview.status === "cancelled") {
+      return res.status(400).json({ success: false, message: "Interview is already ended" });
+    }
+
+    // Call Gemini BEFORE saving status to DB to avoid inconsistent state on failure
+    let feedback;
+    try {
+      feedback = await generateInterviewFeedback({
+        resume: interview.resume,
+        role: interview.role,
+        difficulty: interview.difficulty,
+        questionCount: interview.questionCount,
+        status: "cancelled",
+        conversation: interview.conversation,
+      });
+    } catch (err) {
+      console.error("Gemini feedback error:", err.message);
+      return res.status(502).json({ success: false, message: "Unable to generate feedback. Please try again." });
+    }
+
+    // Success! Update DB
+    interview.status = "cancelled";
+    interview.cancelledAt = new Date();
+    interview.feedback = feedback;
+    await interview.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Interview cancelled",
+      data: {
+        status: interview.status,
+        feedback: interview.feedback,
+      },
+    });
+  } catch (err) {
+    console.error("Cancel interview error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+module.exports = { createInterview, submitAnswer, completeInterview, cancelInterview };

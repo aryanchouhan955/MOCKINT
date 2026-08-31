@@ -84,9 +84,9 @@ const InterviewSchema = new mongoose.Schema(
       default: [],
     },
 
-    // Feedback — will be used in a future chunk
+    // Feedback — structured JSON evaluation from Gemini
     feedback: {
-      type: String,
+      type: mongoose.Schema.Types.Mixed,
       default: null,
     },
 
