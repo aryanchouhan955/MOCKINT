@@ -23,10 +23,14 @@ mongoose
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const interviewRoutes = require("./routes/interviewRoutes");
+const ttsRoutes = require("./routes/ttsRoutes");
+const voiceRoutes = require("./routes/voiceRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/interviews", interviewRoutes);
+app.use("/api/tts", ttsRoutes);
+app.use("/api/voice", voiceRoutes);
 
 // Health check
 app.get("/", (req, res) => {

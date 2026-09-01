@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useScribe } from '@elevenlabs/react'
 import {
   getInterview,
   submitAnswer as apiSubmitAnswer,
   completeInterview as apiCompleteInterview,
   cancelInterview as apiCancelInterview,
+  fetchTTSAudio,
+  fetchSTTToken,
 } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Textarea } from '../components/ui/textarea'
@@ -125,6 +128,118 @@ export default function InterviewRoom() {
 
   // Prevent stale double-submission
   const submittingRef = useRef(false)
+
+  // TTS Audio State
+  const audioRef = useRef(null)
+  const [audioUrl, setAudioUrl] = useState(null)
+  const [audioState, setAudioState] = useState('idle') // idle | loading | playing | paused | error
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false)
+
+  // STT Voice State
+  const scribe = useScribe({
+    modelId: 'scribe_v2_realtime',
+    onError: (err) => {
+      console.error('STT Error:', err)
+      setAnswerError('Microphone error: Please check permissions or continue by typing.')
+    }
+  })
+
+  const handleStartVoice = async () => {
+    if (audioState === 'playing' && audioRef.current) {
+      audioRef.current.pause()
+    }
+    setAnswerError('')
+    try {
+      const sttToken = await fetchSTTToken(token)
+      await scribe.connect({ 
+        token: sttToken,
+        microphone: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      })
+    } catch (err) {
+      setAnswerError('Failed to start voice answering. You can continue by typing.')
+      console.error(err)
+    }
+  }
+
+  const handleFinishVoice = () => {
+    scribe.disconnect()
+    const fullText = scribe.committedTranscripts.map((t) => t.text).join(' ')
+    if (fullText.trim()) {
+      setAnswer((prev) => prev + (prev ? ' ' : '') + fullText)
+    }
+    scribe.clearTranscripts()
+  }
+
+  const handleCancelVoice = () => {
+    scribe.disconnect()
+    scribe.clearTranscripts()
+  }
+
+  useEffect(() => {
+    if (!currentQuestion?.text) return
+
+    let isSubscribed = true
+    let currentUrl = null
+    const text = currentQuestion.text
+
+    async function loadAudio() {
+      try {
+        setAudioState('loading')
+        setAutoplayBlocked(false)
+        const url = await fetchTTSAudio(text, token)
+        
+        if (!isSubscribed) {
+          URL.revokeObjectURL(url)
+          return
+        }
+
+        currentUrl = url
+        setAudioUrl(url)
+      } catch (err) {
+        if (isSubscribed) setAudioState('error')
+        console.error('TTS fetch error:', err)
+      }
+    }
+
+    loadAudio()
+
+    return () => {
+      isSubscribed = false
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl)
+        setAudioUrl(null)
+      }
+      setAudioState('idle')
+    }
+  }, [currentQuestion?.text, token])
+
+  // Play audio automatically when URL is set
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.play().catch(err => {
+        console.warn('Autoplay blocked:', err)
+        setAutoplayBlocked(true)
+        setAudioState('paused')
+      })
+    }
+  }, [audioUrl])
+
+  function toggleAudio() {
+    if (!audioRef.current || !audioUrl) return
+    if (audioState === 'playing') {
+      audioRef.current.pause()
+    } else {
+      setAutoplayBlocked(false)
+      audioRef.current.play().catch(err => console.error(err))
+    }
+  }
+
+  function replayAudio() {
+    if (!audioRef.current || !audioUrl) return
+    setAutoplayBlocked(false)
+    audioRef.current.currentTime = 0
+    audioRef.current.play().catch(err => console.error(err))
+  }
 
   // Timer
   const remaining = useCountdown(interview?.startedAt, interview?.duration)
@@ -358,6 +473,21 @@ export default function InterviewRoom() {
 
   return (
     <>
+      <audio 
+        ref={audioRef}
+        src={audioUrl || undefined} 
+        onPlay={() => setAudioState('playing')}
+        onPause={() => setAudioState('paused')}
+        onEnded={() => setAudioState('idle')}
+        onError={(e) => {
+          if (audioUrl) {
+             setAudioState('error')
+             console.error('Audio playback error')
+          }
+        }}
+        className="hidden"
+      />
+
       {/* Confirm dialogs */}
       {confirmDialog === 'end' && (
         <ConfirmDialog
@@ -443,28 +573,99 @@ export default function InterviewRoom() {
             <p className="text-base sm:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
               {currentQuestion?.text ?? 'Loading question…'}
             </p>
+
+            {/* TTS Controls */}
+            {currentQuestion?.text && (
+              <div className="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={toggleAudio}
+                    disabled={audioState === 'loading' || !audioUrl}
+                  >
+                    {audioState === 'loading' ? 'Loading audio...' : (audioState === 'playing' ? '⏸ Pause' : '🔊 Play')}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={replayAudio}
+                    disabled={audioState === 'loading' || !audioUrl}
+                  >
+                    🔁 Replay
+                  </Button>
+                </div>
+                {autoplayBlocked && (
+                  <p className="text-xs text-amber-500 font-medium">Click Play to hear the question.</p>
+                )}
+                {audioState === 'error' && (
+                  <p className="text-xs text-destructive">Audio unavailable.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Answer area */}
           <div className="flex flex-col gap-3">
-            <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
-              Your Answer
-              <span className="ml-2 text-xs text-muted-foreground font-normal">
-                (Ctrl+Enter to submit)
-              </span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
+                Your Answer
+                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                  (Ctrl+Enter to submit)
+                </span>
+              </label>
+              
+              {!scribe.isConnected && !scribe.isTranscribing && (
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={handleStartVoice}
+                  disabled={isSubmitting || timerExpired || scribe.status === 'connecting'}
+                >
+                  {scribe.status === 'connecting' ? 'Connecting...' : '🎙 Start Voice Answer'}
+                </Button>
+              )}
+              {(scribe.isConnected || scribe.isTranscribing) && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleCancelVoice}>Cancel</Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      scribe.clearTranscripts()
+                    }}
+                  >
+                    Try Again
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={handleFinishVoice}>⏹ Finish Answer</Button>
+                </div>
+              )}
+            </div>
 
-            <Textarea
-              id="answer-input"
-              placeholder="Type your answer here…"
-              value={answer}
-              onChange={(e) => {
-                setAnswer(e.target.value)
-                if (answerError) setAnswerError('')
-              }}
-              disabled={isSubmitting || timerExpired}
-              className="min-h-[180px] text-sm leading-relaxed"
-            />
+            {/* STT View */}
+            {(scribe.isConnected || scribe.isTranscribing) ? (
+              <div className="min-h-[180px] p-3 rounded-md border border-primary bg-card text-sm leading-relaxed overflow-y-auto">
+                {scribe.committedTranscripts.map((t) => (
+                  <span key={t.id}>{t.text} </span>
+                ))}
+                <span className="text-muted-foreground italic">
+                  {scribe.partialTranscript || 'Listening...'}
+                </span>
+              </div>
+            ) : (
+              /* Normal Textarea */
+              <Textarea
+                id="answer-input"
+                placeholder="Type your answer here…"
+                value={answer}
+                onChange={(e) => {
+                  setAnswer(e.target.value)
+                  if (answerError) setAnswerError('')
+                }}
+                disabled={isSubmitting || timerExpired}
+                className="min-h-[180px] text-sm leading-relaxed"
+              />
+            )}
 
             <div className="flex items-center justify-between">
               <div>
@@ -477,21 +678,23 @@ export default function InterviewRoom() {
               </p>
             </div>
 
-            <Button
-              id="submit-answer"
-              onClick={handleSubmitAnswer}
-              disabled={isSubmitting || timerExpired}
-              className="w-full sm:w-auto sm:self-end"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  Generating next question…
-                </span>
-              ) : (
-                'Submit Answer'
-              )}
-            </Button>
+            <div className="flex items-center justify-end gap-3 w-full sm:w-auto mt-2">
+              <Button
+                id="submit-answer"
+                onClick={handleSubmitAnswer}
+                disabled={isSubmitting || timerExpired || scribe.isConnected || scribe.isTranscribing}
+                className="w-full sm:w-auto"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    Generating next question…
+                  </span>
+                ) : (
+                  'Submit Answer'
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Footer actions */}

@@ -144,3 +144,40 @@ export async function getInterviewHistory(token) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+/**
+ * POST /tts — fetch ElevenLabs audio stream
+ * We return an ObjectURL for the Blob so it can be played immediately
+ */
+export async function fetchTTSAudio(text, token) {
+  const res = await fetch(`${BASE_URL}/tts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ text }),
+  })
+
+  if (!res.ok) {
+    throw new Error(`TTS failed: ${res.status}`)
+  }
+
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
+/**
+ * GET /voice/stt-token — fetch single-use token for ElevenLabs Scribe
+ */
+export async function fetchSTTToken(token) {
+  const { data, error } = await apiFetch('/voice/stt-token', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  
+  if (error) {
+    throw new Error(error)
+  }
+  
+  return data.token
+}
