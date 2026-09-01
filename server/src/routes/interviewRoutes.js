@@ -1,7 +1,20 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
-const { createInterview, submitAnswer, completeInterview, cancelInterview } = require("../controllers/interviewController");
+const {
+  getInterviewHistory,
+  getInterviewById,
+  createInterview,
+  submitAnswer,
+  completeInterview,
+  cancelInterview,
+} = require("../controllers/interviewController");
+
+// GET /api/interviews — protected (JWT required)
+router.get("/", authMiddleware, getInterviewHistory);
+
+// GET /api/interviews/:id — protected (JWT required)
+router.get("/:id", authMiddleware, getInterviewById);
 
 // POST /api/interviews — protected (JWT required)
 router.post("/", authMiddleware, createInterview);

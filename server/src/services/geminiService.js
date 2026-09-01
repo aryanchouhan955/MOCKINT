@@ -3,6 +3,8 @@ const { GoogleGenAI } = require("@google/genai");
 // Initialize the Gemini client once — reused across all calls
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const gemini_model = "gemini-3.5-flash";
+
 // ─── generateFirstQuestion ─────────────────────────────────────────────────────
 // Sends candidate context to Gemini and returns a structured first question.
 //
@@ -52,7 +54,7 @@ Generate the first interview question now.`;
 
   // ── Call Gemini ───────────────────────────────────────────────────────────
   const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+    model: gemini_model,
     contents: userPrompt,
     config: {
       systemInstruction,
@@ -162,7 +164,7 @@ Do NOT include any text outside the JSON. Do NOT wrap it in markdown code fences
   const userPrompt = `CONVERSATION SO FAR:\n${conversationText}\n\nGenerate the next interview question now.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+    model: gemini_model,
     contents: userPrompt,
     config: {
       systemInstruction,
@@ -235,7 +237,7 @@ Scores must be supported by evidence from the conversation.
 Do not reward or penalize the candidate based only on the number of questions answered.
 Do not confuse lack of evidence with poor performance.
 
-You MUST respond with ONLY a valid JSON object in this exact format:
+You MUST respond with ONLY a valid JSON object in format like this:
 {
     "technicalAbility": { "score": 8, "comment": "..." },
     "projectKnowledge": { "score": "insufficient_evidence", "comment": "..." },
@@ -260,12 +262,12 @@ Do NOT include any text outside the JSON. Do NOT wrap it in markdown code fences
   const userPrompt = `Candidate Resume:\n${resume}\n\nTarget Role: ${role}\nDifficulty: ${difficulty}\nQuestion Count: ${questionCount}\nInterview Status: ${status}\n\nConversation:\n${conversationText}`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+    model: gemini_model,
     contents: userPrompt,
     config: {
       systemInstruction,
       temperature: 0.2, // low temp for consistent evaluation
-      maxOutputTokens: 2000,
+      maxOutputTokens: 3000,
     },
   });
 

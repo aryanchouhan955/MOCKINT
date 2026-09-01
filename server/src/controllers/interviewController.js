@@ -1,5 +1,132 @@
+const mongoose = require("mongoose");
 const Interview = require("../models/Interview");
 const { generateFirstQuestion, generateNextQuestion, generateInterviewFeedback } = require("../services/geminiService");
+
+// ─── GET /api/interviews ──────────────────────────────────────────────────────
+// Returns summary metadata for the authenticated user's interviews only.
+const getInterviewHistory = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const interviews = await Interview.find(
+      { userId },
+      {
+        role: 1,
+        difficulty: 1,
+        questionCount: 1,
+        questionsAsked: 1,
+        duration: 1,
+        status: 1,
+        feedback: 1,
+        createdAt: 1,
+        completedAt: 1,
+        cancelledAt: 1,
+      }
+    )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const history = interviews.map((interview) => {
+      const overallScore = interview.feedback?.overall?.score ?? null;
+
+      const summary = {
+        id: interview._id.toString(),
+        role: interview.role,
+        difficulty: interview.difficulty,
+        questionCount: interview.questionCount,
+        questionsAsked: interview.questionsAsked,
+        duration: interview.duration,
+        status: interview.status,
+        overallScore,
+        createdAt: interview.createdAt,
+      };
+
+      if (interview.status === "completed" && interview.completedAt) {
+        summary.completedAt = interview.completedAt;
+      }
+
+      if (interview.status === "cancelled" && interview.cancelledAt) {
+        summary.cancelledAt = interview.cancelledAt;
+      }
+
+      return summary;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: history,
+    });
+  } catch (err) {
+    console.error("Get interview history error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// ─── GET /api/interviews/:id ───────────────────────────────────────────────────
+// Returns a single interview that belongs to the authenticated user.
+const getInterviewById = async (req, res) => {
+  try {
+    const interviewId = req.params.id;
+    const userId = req.user.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid interview ID",
+      });
+    }
+
+    const interview = await Interview.findOne({
+      _id: interviewId,
+      userId,
+    }).lean();
+
+    if (!interview) {
+      return res.status(404).json({
+        success: false,
+        message: "Interview not found",
+      });
+    }
+
+    const conversation = (interview.conversation || []).map((msg) => ({
+      role: msg.role,
+      text: msg.text,
+      ...(msg.topic ? { topic: msg.topic } : {}),
+      ...(msg.difficulty ? { difficulty: msg.difficulty } : {}),
+      timestamp: msg.createdAt ? msg.createdAt : null,
+    }));
+
+    const response = {
+      id: interview._id.toString(),
+      role: interview.role,
+      difficulty: interview.difficulty,
+      questionCount: interview.questionCount,
+      questionsAsked: interview.questionsAsked,
+      duration: interview.duration,
+      status: interview.status,
+      conversation,
+      feedback: interview.feedback ?? null,
+      createdAt: interview.createdAt,
+      startedAt: interview.startedAt ?? null,
+      ...(interview.status === "completed" ? { completedAt: interview.completedAt ?? null } : {}),
+      ...(interview.status === "cancelled" ? { cancelledAt: interview.cancelledAt ?? null } : {}),
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: response,
+    });
+  } catch (err) {
+    console.error("Get interview by ID error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 // ─── POST /api/interviews ──────────────────────────────────────────────────────
 // Creates a new interview, generates the first question via Gemini,
@@ -147,6 +274,11 @@ const submitAnswer = async (req, res) => {
     const { answer } = req.body;
     const userId = req.user.userId;
 
+    // 0. Validate ObjectId format early to prevent Mongoose CastError crash
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      return res.status(400).json({ success: false, message: "Invalid interview ID" });
+    }
+
     // 1. Validate answer
     if (!answer || typeof answer !== "string" || answer.trim().length === 0) {
       return res.status(400).json({
@@ -178,7 +310,18 @@ const submitAnswer = async (req, res) => {
       });
     }
 
-    // 4. Add candidate's answer to conversation
+    // 4. Concurrent-submit guard: last message must be from the interviewer.
+    //    If the last message is already from a candidate it means this answer
+    //    was already saved (e.g. double-click / duplicate request). Reject safely.
+    const lastMsg = interview.conversation[interview.conversation.length - 1];
+    if (lastMsg && lastMsg.role === "candidate") {
+      return res.status(409).json({
+        success: false,
+        message: "Answer already submitted. Wait for the next question.",
+      });
+    }
+
+    // 5. Add candidate's answer to conversation
     interview.conversation.push({
       role: "candidate",
       text: answer.trim(),
@@ -188,7 +331,7 @@ const submitAnswer = async (req, res) => {
     const now = new Date();
     const elapsedTimeSeconds = (now.getTime() - interview.startedAt.getTime()) / 1000;
     const maxTimeSeconds = interview.duration * 60;
-    
+
     // If time is up, or we already asked max questions before this answer
     // Note: questionsAsked tracks questions *already asked*, so if questionsAsked >= questionCount, 
     // the user just answered the final question.
@@ -201,7 +344,7 @@ const submitAnswer = async (req, res) => {
           status: "ready_to_complete",
           message: "Interview limit reached (time or questions). Ready for completion.",
         }
-      });
+      }); //
     }
 
     // 6. Generate Next Question via Gemini
@@ -234,7 +377,7 @@ const submitAnswer = async (req, res) => {
           }
           continue; // Try again
         }
-        
+
         break; // Success!
       } catch (err) {
         console.error(`Gemini next question error (attempt ${attempts}):`, err.message);
@@ -254,7 +397,7 @@ const submitAnswer = async (req, res) => {
       topic: nextQData.topic,
       difficulty: nextQData.difficulty,
     });
-    
+
     interview.questionsAsked += 1;
     await interview.save();
 
@@ -287,6 +430,10 @@ const completeInterview = async (req, res) => {
   try {
     const interviewId = req.params.id;
     const userId = req.user.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      return res.status(400).json({ success: false, message: "Invalid interview ID" });
+    }
 
     const interview = await Interview.findOne({ _id: interviewId, userId });
     if (!interview) {
@@ -321,6 +468,7 @@ const completeInterview = async (req, res) => {
     interview.status = "completed";
     interview.completedAt = new Date();
     interview.feedback = feedback;
+    interview.markModified("feedback"); // required for Mongoose Mixed type
     await interview.save();
 
     return res.status(200).json({
@@ -342,6 +490,9 @@ const cancelInterview = async (req, res) => {
   try {
     const interviewId = req.params.id;
     const userId = req.user.userId;
+    if (!mongoose.Types.ObjectId.isValid(interviewId)) {
+      return res.status(400).json({ success: false, message: "Invalid interview ID" });
+    }
 
     const interview = await Interview.findOne({ _id: interviewId, userId });
     if (!interview) {
@@ -372,6 +523,7 @@ const cancelInterview = async (req, res) => {
     interview.status = "cancelled";
     interview.cancelledAt = new Date();
     interview.feedback = feedback;
+    interview.markModified("feedback"); // required for Mongoose Mixed type
     await interview.save();
 
     return res.status(200).json({
@@ -388,4 +540,11 @@ const cancelInterview = async (req, res) => {
   }
 };
 
-module.exports = { createInterview, submitAnswer, completeInterview, cancelInterview };
+module.exports = {
+  getInterviewHistory,
+  getInterviewById,
+  createInterview,
+  submitAnswer,
+  completeInterview,
+  cancelInterview,
+};
