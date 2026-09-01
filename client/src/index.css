@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 14% 8%;
+    --foreground: 210 20% 92%;
+
+    --card: 222 14% 11%;
+    --card-foreground: 210 20% 92%;
+
+    --primary: 221 83% 63%;
+    --primary-foreground: 222 14% 8%;
+
+    --secondary: 222 14% 15%;
+    --secondary-foreground: 210 20% 80%;
+
+    --muted: 222 14% 15%;
+    --muted-foreground: 215 15% 55%;
+
+    --accent: 221 83% 63%;
+    --accent-foreground: 222 14% 8%;
+
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 210 20% 92%;
+
+    --border: 222 14% 18%;
+    --input: 222 14% 14%;
+    --ring: 221 83% 63%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: hsl(210 20% 92%);
+    -webkit-box-shadow: 0 0 0px 1000px hsl(222 14% 14%) inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
