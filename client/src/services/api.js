@@ -166,3 +166,16 @@ export async function fetchTTSAudio(text, token) {
   const blob = await res.blob()
   return URL.createObjectURL(blob)
 }
+
+/**
+ * GET /stt/token — fetch a short-lived, single-use ElevenLabs realtime STT
+ * token for client-side microphone streaming (Voice Answer). The token
+ * expires in 15 minutes and is consumed on first use; the real API key
+ * never reaches the browser.
+ * @param {string} token
+ */
+export async function fetchSTTToken(token) {
+  return apiFetch('/stt/token', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}

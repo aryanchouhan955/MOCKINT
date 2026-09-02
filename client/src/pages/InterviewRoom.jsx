@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useScribe, CommitStrategy } from '@elevenlabs/react'
 import {
   getInterview,
   submitAnswer as apiSubmitAnswer,
   completeInterview as apiCompleteInterview,
   cancelInterview as apiCancelInterview,
   fetchTTSAudio,
+  fetchSTTToken,
 } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Textarea } from '../components/ui/textarea'
@@ -51,6 +53,33 @@ function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+// ─── Voice-answer error mapping ───────────────────────────────────────────────
+// getUserMedia rejects with a DOMException whose `name` identifies the failure;
+// ElevenLabs realtime STT errors surface as `{ error: <code> }` (see the Scribe
+// event reference). Map both families to one actionable, user-facing message.
+function microphoneErrorMessage(err) {
+  const code = err?.name || err?.error || ''
+  switch (code) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+      return 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'No microphone was found. Please connect a microphone and try again.'
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'Your microphone is unavailable — it may be in use by another application.'
+    case 'auth_error':
+      return 'Voice answering could not be authenticated. Please try again.'
+    case 'quota_exceeded':
+      return 'Voice answering usage limit reached. You can continue by typing.'
+    case 'rate_limited':
+      return 'Too many voice-answer attempts. Please wait a moment and try again.'
+    default:
+      return 'Could not start voice answering. You can continue by typing.'
+  }
 }
 
 // ─── Confirmation dialog ──────────────────────────────────────────────────────
@@ -199,6 +228,118 @@ export default function InterviewRoom() {
     audioRef.current.play().catch(err => console.error(err))
   }
 
+  // ─── Voice Answer (ElevenLabs Scribe realtime STT) ─────────────────────────
+  // commitStrategy MUST be VAD for live microphone input — the default is
+  // MANUAL, which never fires committed transcripts for a continuous mic
+  // stream. The `microphone` option below only accepts echoCancellation /
+  // noiseSuppression / autoGainControl — there is no system-audio option here,
+  // this is mic-only by design (per the spec's "user's microphone" requirement).
+  const [isRequestingVoice, setIsRequestingVoice] = useState(false)
+  const [isStoppingVoice, setIsStoppingVoice] = useState(false)
+  const [voiceError, setVoiceError] = useState('')
+  // Bumped on every start/stop/cancel/unmount so a slow-to-resolve token
+  // fetch or connect() from an earlier click can never touch state for a
+  // session the user (or the component) has already moved past.
+  const voiceSessionIdRef = useRef(0)
+
+  const scribe = useScribe({
+    modelId: 'scribe_v2_realtime',
+    commitStrategy: CommitStrategy.VAD,
+    onAuthError: () => {
+      setVoiceError('Voice answering could not be authenticated. Please try again.')
+    },
+    onError: (err) => {
+      console.error('STT error:', err)
+      setVoiceError(microphoneErrorMessage(err))
+    },
+  })
+
+  // Per the SDK: status transitions from "connected" to "transcribing" once
+  // speech/VAD activity is detected, so both must count as "active" or the
+  // UI would flicker/reset mid-session.
+  const isVoiceActive = scribe.status === 'connected' || scribe.status === 'transcribing'
+  const isVoiceBusy = isRequestingVoice || scribe.status === 'connecting'
+
+  const handleStartVoice = useCallback(async () => {
+    if (isVoiceBusy || isVoiceActive) return // never open a second session
+
+    if (audioState === 'playing' && audioRef.current) {
+      audioRef.current.pause()
+    }
+    setAnswerError('')
+    setVoiceError('')
+    scribe.clearTranscripts()
+
+    const mySession = ++voiceSessionIdRef.current
+    setIsRequestingVoice(true)
+
+    const { data, error } = await fetchSTTToken(token)
+
+    // The user may have cancelled, stopped, or the component may have
+    // unmounted while the token request was in flight — ignore a stale start.
+    if (mySession !== voiceSessionIdRef.current) return
+
+    if (error || !data?.token) {
+      setIsRequestingVoice(false)
+      setVoiceError('Could not start voice answering. You can continue by typing.')
+      return
+    }
+
+    try {
+      await scribe.connect({
+        token: data.token,
+        // `microphone` is the only audio-source this SDK exposes — it always
+        // resolves to navigator.mediaDevices.getUserMedia({ audio: true }).
+        microphone: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
+      if (mySession !== voiceSessionIdRef.current) {
+        // Superseded while connecting (Cancel/Stop/unmount happened
+        // meanwhile) — tear the just-opened session back down.
+        scribe.disconnect()
+        return
+      }
+    } catch (err) {
+      if (mySession === voiceSessionIdRef.current) {
+        setVoiceError(microphoneErrorMessage(err))
+      }
+    } finally {
+      if (mySession === voiceSessionIdRef.current) setIsRequestingVoice(false)
+    }
+  }, [isVoiceBusy, isVoiceActive, audioState, scribe, token])
+
+  const handleFinishVoice = useCallback(() => {
+    if (!isVoiceActive || isStoppingVoice) return
+    setIsStoppingVoice(true)
+    voiceSessionIdRef.current++ // invalidate any start still in flight
+    scribe.disconnect()
+    const fullText = scribe.committedTranscripts.map((t) => t.text).join(' ').trim()
+    if (fullText) {
+      setAnswer((prev) => (prev ? `${prev} ${fullText}` : fullText))
+      setAnswerError('')
+    }
+    scribe.clearTranscripts()
+    setIsStoppingVoice(false)
+  }, [isVoiceActive, isStoppingVoice, scribe])
+
+  const handleCancelVoice = useCallback(() => {
+    voiceSessionIdRef.current++ // invalidate any start still in flight
+    setVoiceError('')
+    scribe.disconnect()
+    scribe.clearTranscripts()
+  }, [scribe])
+
+  // Defensive cleanup: release the mic/WebSocket if the component unmounts
+  // (navigation away, submit redirect, etc.) while a voice answer is active.
+  useEffect(() => {
+    return () => {
+      voiceSessionIdRef.current++
+      if (scribe.status === 'connected' || scribe.status === 'transcribing' || scribe.status === 'connecting') {
+        scribe.disconnect()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Timer
   const remaining = useCountdown(interview?.startedAt, interview?.duration)
 
@@ -245,6 +386,10 @@ export default function InterviewRoom() {
   // ── Submit Answer ───────────────────────────────────────────────────────────
   const handleSubmitAnswer = useCallback(async () => {
     if (submittingRef.current) return // prevent double-submission
+    if (isVoiceActive || isVoiceBusy) {
+      setAnswerError('Please stop voice answering before submitting.')
+      return
+    }
     if (!answer.trim()) {
       setAnswerError('Please write an answer before submitting.')
       return
@@ -284,7 +429,7 @@ export default function InterviewRoom() {
     setQuestionsAsked(payload.questionsAsked)
     setAnswer('')
     setPageState(STATE.ACTIVE)
-  }, [answer, id, token])
+  }, [answer, id, token, isVoiceActive, isVoiceBusy])
 
   // ── Complete Interview ──────────────────────────────────────────────────────
   const handleComplete = useCallback(async () => {
@@ -565,24 +710,79 @@ export default function InterviewRoom() {
 
           {/* Answer area */}
           <div className="flex flex-col gap-3">
-            <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
-              Your Answer
-              <span className="ml-2 text-xs text-muted-foreground font-normal">
-                (Ctrl+Enter to submit)
-              </span>
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
+                Your Answer
+                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                  (Ctrl+Enter to submit)
+                </span>
+              </label>
 
-            <Textarea
-              id="answer-input"
-              placeholder="Type your answer here…"
-              value={answer}
-              onChange={(e) => {
-                setAnswer(e.target.value)
-                if (answerError) setAnswerError('')
-              }}
-              disabled={isSubmitting || timerExpired}
-              className="min-h-[180px] text-sm leading-relaxed"
-            />
+              {!isVoiceActive && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleStartVoice}
+                  disabled={isSubmitting || timerExpired || isVoiceBusy}
+                >
+                  {isVoiceBusy
+                    ? (scribe.status === 'connecting' ? 'Connecting…' : 'Requesting microphone…')
+                    : '🎙 Start Voice Answer'}
+                </Button>
+              )}
+              {isVoiceActive && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleCancelVoice} disabled={isStoppingVoice}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => scribe.clearTranscripts()}
+                    disabled={isStoppingVoice}
+                  >
+                    Try Again
+                  </Button>
+                  <Button size="sm" onClick={handleFinishVoice} disabled={isStoppingVoice}>
+                    {isStoppingVoice ? 'Stopping…' : '⏹ Stop Voice Answer'}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {voiceError && (
+              <p className="text-sm text-destructive">{voiceError}</p>
+            )}
+
+            {/* Voice-answer live transcript view (replaces the textarea while recording) */}
+            {isVoiceActive ? (
+              <div className="min-h-[180px] p-3 rounded-md border border-primary bg-card text-sm leading-relaxed overflow-y-auto">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-xs text-muted-foreground">
+                    {scribe.status === 'transcribing' ? 'Listening…' : 'Recording…'}
+                  </span>
+                </div>
+                {scribe.committedTranscripts.map((t) => (
+                  <span key={t.id} className="text-foreground">{t.text} </span>
+                ))}
+                <span className="text-muted-foreground italic">
+                  {scribe.partialTranscript || (scribe.committedTranscripts.length ? '' : 'Start speaking…')}
+                </span>
+              </div>
+            ) : (
+              <Textarea
+                id="answer-input"
+                placeholder="Type your answer here…"
+                value={answer}
+                onChange={(e) => {
+                  setAnswer(e.target.value)
+                  if (answerError) setAnswerError('')
+                }}
+                disabled={isSubmitting || timerExpired}
+                className="min-h-[180px] text-sm leading-relaxed"
+              />
+            )}
 
             <div className="flex items-center justify-between">
               <div>
@@ -598,7 +798,7 @@ export default function InterviewRoom() {
             <Button
               id="submit-answer"
               onClick={handleSubmitAnswer}
-              disabled={isSubmitting || timerExpired}
+              disabled={isSubmitting || timerExpired || isVoiceActive || isVoiceBusy}
               className="w-full sm:w-auto sm:self-end"
             >
               {isSubmitting ? (
