@@ -23,124 +23,6 @@ const STATE = {
   NOT_FOUND: 'not_found',
 }
 
-// ─── Native Speech Recognition Hook ──────────────────────────────────────────
-function useSpeechRecognition() {
-  const recognitionRef = useRef(null)
-  const committedRef = useRef('')
-  const [status, setStatus] = useState('idle') // idle | listening | error
-  const [display, setDisplay] = useState({ committed: '', partial: '' })
-  const [errorMsg, setErrorMsg] = useState('')
-
-  const isSupported =
-    typeof window !== 'undefined' &&
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
-
-  const start = useCallback(() => {
-    if (!isSupported) {
-      setErrorMsg('Speech recognition is not supported in this browser. Please use Chrome or Edge.')
-      setStatus('error')
-      return false
-    }
-
-    // Reset state
-    committedRef.current = ''
-    setDisplay({ committed: '', partial: '' })
-    setErrorMsg('')
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    const rec = new SR()
-    rec.continuous = true
-    rec.interimResults = true
-    rec.lang = 'en-US'
-    rec.maxAlternatives = 1
-
-    rec.onstart = () => {
-      console.log('Speech recognition started')
-      setStatus('listening')
-    }
-
-    rec.onresult = (event) => {
-      let interim = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i]
-        if (result.isFinal) {
-          const text = result[0].transcript.trim()
-          if (text) {
-            committedRef.current = committedRef.current
-              ? committedRef.current + ' ' + text
-              : text
-          }
-        } else {
-          interim += result[0].transcript
-        }
-      }
-      setDisplay({ committed: committedRef.current, partial: interim })
-    }
-
-    rec.onerror = (e) => {
-      console.error('Speech recognition error:', e.error)
-      if (e.error === 'not-allowed') {
-        setErrorMsg('Microphone access denied. Please allow microphone in browser settings.')
-      } else if (e.error === 'no-speech') {
-        // not-fatal — browser restarts automatically
-        return
-      } else {
-        setErrorMsg(`Voice error: ${e.error}. You can continue by typing.`)
-      }
-      setStatus('error')
-    }
-
-    rec.onend = () => {
-      // Chrome auto-stops after silence — restart if still in listening mode
-      if (recognitionRef.current === rec) {
-        try { rec.start() } catch (_) {}
-      }
-    }
-
-    recognitionRef.current = rec
-    try {
-      rec.start()
-      return true
-    } catch (e) {
-      console.error('Failed to start recognition:', e)
-      setErrorMsg('Failed to start voice recognition. Please try again.')
-      setStatus('error')
-      return false
-    }
-  }, [isSupported])
-
-  const stop = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = null // prevent auto-restart
-      try { recognitionRef.current.stop() } catch (_) {}
-      recognitionRef.current = null
-    }
-    setStatus('idle')
-    setDisplay({ committed: '', partial: '' })
-  }, [])
-
-  const reset = useCallback(() => {
-    committedRef.current = ''
-    setDisplay({ committed: '', partial: '' })
-  }, [])
-
-  const getTranscript = useCallback(() => {
-    return committedRef.current.trim()
-  }, [])
-
-  return {
-    isSupported,
-    status,
-    isListening: status === 'listening',
-    display,
-    errorMsg,
-    start,
-    stop,
-    reset,
-    getTranscript,
-  }
-}
-
 // ─── Timer hook ───────────────────────────────────────────────────────────────
 function useCountdown(startedAt, durationMinutes) {
   const [remaining, setRemaining] = useState(null)
@@ -250,33 +132,6 @@ export default function InterviewRoom() {
   const [audioUrl, setAudioUrl] = useState(null)
   const [audioState, setAudioState] = useState('idle') // idle | loading | playing | paused | error
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
-
-  // STT Voice State — uses browser native Web Speech API
-  const stt = useSpeechRecognition()
-
-  const handleStartVoice = () => {
-    if (audioState === 'playing' && audioRef.current) {
-      audioRef.current.pause()
-    }
-    setAnswerError('')
-    const started = stt.start()
-    if (!started && stt.errorMsg) {
-      setAnswerError(stt.errorMsg)
-    }
-  }
-
-  const handleFinishVoice = () => {
-    const fullText = stt.getTranscript()
-    console.log('STT finish — transcript:', fullText)
-    stt.stop()
-    if (fullText) {
-      setAnswer((prev) => prev ? prev + ' ' + fullText : fullText)
-    }
-  }
-
-  const handleCancelVoice = () => {
-    stt.stop()
-  }
 
   useEffect(() => {
     if (!currentQuestion?.text) return
@@ -476,10 +331,11 @@ export default function InterviewRoom() {
   // ── Timer expiry handling ───────────────────────────────────────────────────
   useEffect(() => {
     if (remaining === 0 && pageState === STATE.ACTIVE) {
-      // Time is up — automatically end the interview.
-      handleComplete()
+      // Time is up — the backend will enforce this on next answer submission.
+      // Show the end dialog as a nudge.
+      setConfirmDialog('end')
     }
-  }, [remaining, pageState, handleComplete])
+  }, [remaining, pageState])
 
   // ── Keyboard shortcut: Ctrl+Enter to submit ─────────────────────────────────
   useEffect(() => {
@@ -709,67 +565,24 @@ export default function InterviewRoom() {
 
           {/* Answer area */}
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
-                Your Answer
-                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  (Ctrl+Enter to submit)
-                </span>
-              </label>
-              
-              {!stt.isListening && (
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={handleStartVoice}
-                  disabled={isSubmitting || timerExpired}
-                >
-                  🎙 Start Voice Answer
-                </Button>
-              )}
-              {stt.isListening && (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={handleCancelVoice}>Cancel</Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => stt.reset()}
-                  >
-                    Try Again
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={handleFinishVoice}>⏹ Finish Answer</Button>
-                </div>
-              )}
-            </div>
+            <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
+              Your Answer
+              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                (Ctrl+Enter to submit)
+              </span>
+            </label>
 
-            {/* STT View */}
-            {stt.isListening ? (
-              <div className="min-h-[180px] p-3 rounded-md border border-primary bg-card text-sm leading-relaxed overflow-y-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs text-muted-foreground">Recording…</span>
-                </div>
-                {stt.display.committed && (
-                  <span className="text-foreground">{stt.display.committed} </span>
-                )}
-                <span className="text-muted-foreground italic">
-                  {stt.display.partial || (stt.display.committed ? '' : 'Listening… start speaking')}
-                </span>
-              </div>
-            ) : (
-              /* Normal Textarea */
-              <Textarea
-                id="answer-input"
-                placeholder="Type your answer here…"
-                value={answer}
-                onChange={(e) => {
-                  setAnswer(e.target.value)
-                  if (answerError) setAnswerError('')
-                }}
-                disabled={isSubmitting || timerExpired}
-                className="min-h-[180px] text-sm leading-relaxed"
-              />
-            )}
+            <Textarea
+              id="answer-input"
+              placeholder="Type your answer here…"
+              value={answer}
+              onChange={(e) => {
+                setAnswer(e.target.value)
+                if (answerError) setAnswerError('')
+              }}
+              disabled={isSubmitting || timerExpired}
+              className="min-h-[180px] text-sm leading-relaxed"
+            />
 
             <div className="flex items-center justify-between">
               <div>
@@ -782,23 +595,21 @@ export default function InterviewRoom() {
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-3 w-full sm:w-auto mt-2">
-              <Button
-                id="submit-answer"
-                onClick={handleSubmitAnswer}
-                disabled={isSubmitting || timerExpired || stt.isListening}
-                className="w-full sm:w-auto"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                    Generating next question…
-                  </span>
-                ) : (
-                  'Submit Answer'
-                )}
-              </Button>
-            </div>
+            <Button
+              id="submit-answer"
+              onClick={handleSubmitAnswer}
+              disabled={isSubmitting || timerExpired}
+              className="w-full sm:w-auto sm:self-end"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  Generating next question…
+                </span>
+              ) : (
+                'Submit Answer'
+              )}
+            </Button>
           </div>
 
           {/* Footer actions */}

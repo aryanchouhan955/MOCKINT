@@ -166,18 +166,3 @@ export async function fetchTTSAudio(text, token) {
   const blob = await res.blob()
   return URL.createObjectURL(blob)
 }
-
-/**
- * GET /voice/stt-token — fetch single-use token for ElevenLabs Scribe
- */
-export async function fetchSTTToken(token) {
-  const { data, error } = await apiFetch('/voice/stt-token', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  
-  if (error) {
-    throw new Error(error)
-  }
-  
-  return data.token
-}

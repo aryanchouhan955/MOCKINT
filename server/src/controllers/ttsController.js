@@ -34,9 +34,7 @@ const textToSpeech = async (req, res) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('ElevenLabs API Error:', response.status, errorText);
-      // Return 502 Bad Gateway to prevent client-side JWT auto-logout on 401
-      const statusCode = (response.status === 401 || response.status === 403) ? 502 : response.status;
-      return res.status(statusCode).json({ success: false, message: 'ElevenLabs API Error' });
+      return res.status(response.status).json({ success: false, message: 'ElevenLabs API Error' });
     }
 
     // Pipe the audio stream back to the client
