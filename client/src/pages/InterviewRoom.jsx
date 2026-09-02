@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useScribe } from '@elevenlabs/react'
 import {
   getInterview,
   submitAnswer as apiSubmitAnswer,
   completeInterview as apiCompleteInterview,
   cancelInterview as apiCancelInterview,
   fetchTTSAudio,
-  fetchSTTToken,
 } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Textarea } from '../components/ui/textarea'
@@ -23,6 +21,124 @@ const STATE = {
   CANCELLED: 'cancelled',
   ERROR: 'error',
   NOT_FOUND: 'not_found',
+}
+
+// ─── Native Speech Recognition Hook ──────────────────────────────────────────
+function useSpeechRecognition() {
+  const recognitionRef = useRef(null)
+  const committedRef = useRef('')
+  const [status, setStatus] = useState('idle') // idle | listening | error
+  const [display, setDisplay] = useState({ committed: '', partial: '' })
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const isSupported =
+    typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
+
+  const start = useCallback(() => {
+    if (!isSupported) {
+      setErrorMsg('Speech recognition is not supported in this browser. Please use Chrome or Edge.')
+      setStatus('error')
+      return false
+    }
+
+    // Reset state
+    committedRef.current = ''
+    setDisplay({ committed: '', partial: '' })
+    setErrorMsg('')
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    const rec = new SR()
+    rec.continuous = true
+    rec.interimResults = true
+    rec.lang = 'en-US'
+    rec.maxAlternatives = 1
+
+    rec.onstart = () => {
+      console.log('Speech recognition started')
+      setStatus('listening')
+    }
+
+    rec.onresult = (event) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          const text = result[0].transcript.trim()
+          if (text) {
+            committedRef.current = committedRef.current
+              ? committedRef.current + ' ' + text
+              : text
+          }
+        } else {
+          interim += result[0].transcript
+        }
+      }
+      setDisplay({ committed: committedRef.current, partial: interim })
+    }
+
+    rec.onerror = (e) => {
+      console.error('Speech recognition error:', e.error)
+      if (e.error === 'not-allowed') {
+        setErrorMsg('Microphone access denied. Please allow microphone in browser settings.')
+      } else if (e.error === 'no-speech') {
+        // not-fatal — browser restarts automatically
+        return
+      } else {
+        setErrorMsg(`Voice error: ${e.error}. You can continue by typing.`)
+      }
+      setStatus('error')
+    }
+
+    rec.onend = () => {
+      // Chrome auto-stops after silence — restart if still in listening mode
+      if (recognitionRef.current === rec) {
+        try { rec.start() } catch (_) {}
+      }
+    }
+
+    recognitionRef.current = rec
+    try {
+      rec.start()
+      return true
+    } catch (e) {
+      console.error('Failed to start recognition:', e)
+      setErrorMsg('Failed to start voice recognition. Please try again.')
+      setStatus('error')
+      return false
+    }
+  }, [isSupported])
+
+  const stop = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null // prevent auto-restart
+      try { recognitionRef.current.stop() } catch (_) {}
+      recognitionRef.current = null
+    }
+    setStatus('idle')
+    setDisplay({ committed: '', partial: '' })
+  }, [])
+
+  const reset = useCallback(() => {
+    committedRef.current = ''
+    setDisplay({ committed: '', partial: '' })
+  }, [])
+
+  const getTranscript = useCallback(() => {
+    return committedRef.current.trim()
+  }, [])
+
+  return {
+    isSupported,
+    status,
+    isListening: status === 'listening',
+    display,
+    errorMsg,
+    start,
+    stop,
+    reset,
+    getTranscript,
+  }
 }
 
 // ─── Timer hook ───────────────────────────────────────────────────────────────
@@ -135,44 +251,31 @@ export default function InterviewRoom() {
   const [audioState, setAudioState] = useState('idle') // idle | loading | playing | paused | error
   const [autoplayBlocked, setAutoplayBlocked] = useState(false)
 
-  // STT Voice State
-  const scribe = useScribe({
-    modelId: 'scribe_v2_realtime',
-    onError: (err) => {
-      console.error('STT Error:', err)
-      setAnswerError('Microphone error: Please check permissions or continue by typing.')
-    }
-  })
+  // STT Voice State — uses browser native Web Speech API
+  const stt = useSpeechRecognition()
 
-  const handleStartVoice = async () => {
+  const handleStartVoice = () => {
     if (audioState === 'playing' && audioRef.current) {
       audioRef.current.pause()
     }
     setAnswerError('')
-    try {
-      const sttToken = await fetchSTTToken(token)
-      await scribe.connect({ 
-        token: sttToken,
-        microphone: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-      })
-    } catch (err) {
-      setAnswerError('Failed to start voice answering. You can continue by typing.')
-      console.error(err)
+    const started = stt.start()
+    if (!started && stt.errorMsg) {
+      setAnswerError(stt.errorMsg)
     }
   }
 
   const handleFinishVoice = () => {
-    scribe.disconnect()
-    const fullText = scribe.committedTranscripts.map((t) => t.text).join(' ')
-    if (fullText.trim()) {
-      setAnswer((prev) => prev + (prev ? ' ' : '') + fullText)
+    const fullText = stt.getTranscript()
+    console.log('STT finish — transcript:', fullText)
+    stt.stop()
+    if (fullText) {
+      setAnswer((prev) => prev ? prev + ' ' + fullText : fullText)
     }
-    scribe.clearTranscripts()
   }
 
   const handleCancelVoice = () => {
-    scribe.disconnect()
-    scribe.clearTranscripts()
+    stt.stop()
   }
 
   useEffect(() => {
@@ -373,11 +476,10 @@ export default function InterviewRoom() {
   // ── Timer expiry handling ───────────────────────────────────────────────────
   useEffect(() => {
     if (remaining === 0 && pageState === STATE.ACTIVE) {
-      // Time is up — the backend will enforce this on next answer submission.
-      // Show the end dialog as a nudge.
-      setConfirmDialog('end')
+      // Time is up — automatically end the interview.
+      handleComplete()
     }
-  }, [remaining, pageState])
+  }, [remaining, pageState, handleComplete])
 
   // ── Keyboard shortcut: Ctrl+Enter to submit ─────────────────────────────────
   useEffect(() => {
@@ -615,25 +717,23 @@ export default function InterviewRoom() {
                 </span>
               </label>
               
-              {!scribe.isConnected && !scribe.isTranscribing && (
+              {!stt.isListening && (
                 <Button 
                   variant="secondary" 
                   size="sm" 
                   onClick={handleStartVoice}
-                  disabled={isSubmitting || timerExpired || scribe.status === 'connecting'}
+                  disabled={isSubmitting || timerExpired}
                 >
-                  {scribe.status === 'connecting' ? 'Connecting...' : '🎙 Start Voice Answer'}
+                  🎙 Start Voice Answer
                 </Button>
               )}
-              {(scribe.isConnected || scribe.isTranscribing) && (
+              {stt.isListening && (
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="sm" onClick={handleCancelVoice}>Cancel</Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => {
-                      scribe.clearTranscripts()
-                    }}
+                    onClick={() => stt.reset()}
                   >
                     Try Again
                   </Button>
@@ -643,13 +743,17 @@ export default function InterviewRoom() {
             </div>
 
             {/* STT View */}
-            {(scribe.isConnected || scribe.isTranscribing) ? (
+            {stt.isListening ? (
               <div className="min-h-[180px] p-3 rounded-md border border-primary bg-card text-sm leading-relaxed overflow-y-auto">
-                {scribe.committedTranscripts.map((t) => (
-                  <span key={t.id}>{t.text} </span>
-                ))}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-xs text-muted-foreground">Recording…</span>
+                </div>
+                {stt.display.committed && (
+                  <span className="text-foreground">{stt.display.committed} </span>
+                )}
                 <span className="text-muted-foreground italic">
-                  {scribe.partialTranscript || 'Listening...'}
+                  {stt.display.partial || (stt.display.committed ? '' : 'Listening… start speaking')}
                 </span>
               </div>
             ) : (
@@ -682,7 +786,7 @@ export default function InterviewRoom() {
               <Button
                 id="submit-answer"
                 onClick={handleSubmitAnswer}
-                disabled={isSubmitting || timerExpired || scribe.isConnected || scribe.isTranscribing}
+                disabled={isSubmitting || timerExpired || stt.isListening}
                 className="w-full sm:w-auto"
               >
                 {isSubmitting ? (
