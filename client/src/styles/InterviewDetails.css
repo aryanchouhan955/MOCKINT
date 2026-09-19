@@ -1,0 +1,383 @@
+/* ── InterviewDetails Layout ─────────────────────────────────────────────── */
+.id-container {
+  @apply min-h-screen pb-20;
+  background: hsl(var(--background));
+  position: relative;
+}
+
+.id-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 45% at 5% 0%, hsl(248 90% 66% / 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 95% 100%, hsl(280 80% 68% / 0.06) 0%, transparent 50%);
+}
+
+.id-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.id-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.id-header-inner {
+  @apply mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between;
+}
+
+.id-title {
+  @apply text-lg font-bold tracking-tight truncate max-w-[200px] sm:max-w-md;
+  letter-spacing: -0.02em;
+}
+
+.id-subtitle {
+  @apply text-xs text-muted-foreground mt-0.5;
+}
+
+.id-header-actions {
+  @apply flex items-center gap-3;
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
+.id-main {
+  @apply mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-8;
+  animation: fadeInUp 0.55s ease both;
+}
+
+/* ── Info Cards ──────────────────────────────────────────────────────────── */
+.id-info-grid {
+  @apply grid grid-cols-2 sm:grid-cols-4 gap-3;
+}
+
+.id-info-card {
+  @apply p-4 rounded-xl;
+  background: var(--surface-glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--surface-glass-border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.id-info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px hsl(0 0% 0% / 0.1);
+}
+
+.id-info-label {
+  @apply text-xs text-muted-foreground uppercase tracking-wider mb-1.5;
+}
+
+.id-info-val-capitalize {
+  @apply font-semibold capitalize text-foreground;
+}
+
+.id-info-val {
+  @apply font-semibold text-foreground;
+}
+
+.id-info-val-badge {
+  @apply mt-0.5;
+}
+
+/* ── Section Title ───────────────────────────────────────────────────────── */
+.id-section-title {
+  @apply text-lg font-bold mb-4;
+  letter-spacing: -0.01em;
+}
+
+/* ── Conversation ────────────────────────────────────────────────────────── */
+.id-conv-list {
+  @apply space-y-5;
+}
+
+.id-msg-interviewer {
+  @apply p-5 rounded-xl;
+  background: hsl(248 90% 66% / 0.06);
+  border: 1px solid hsl(248 90% 66% / 0.2);
+  border-left: 3px solid hsl(248 90% 66% / 0.7);
+}
+
+.id-msg-user {
+  @apply p-5 rounded-xl;
+  background: var(--surface-glass);
+  border: 1px solid var(--surface-glass-border);
+}
+
+.id-msg-header {
+  @apply text-xs font-bold uppercase tracking-wider mb-2.5 flex items-center justify-between;
+}
+
+.id-msg-role-interviewer {
+  color: hsl(248 90% 72%);
+}
+
+.id-msg-role-user {
+  @apply text-muted-foreground;
+}
+
+.id-msg-topic {
+  @apply text-muted-foreground/60 font-normal normal-case tracking-normal text-xs;
+}
+
+.id-msg-text {
+  @apply text-sm leading-relaxed whitespace-pre-wrap text-foreground/90;
+}
+
+.id-conv-empty {
+  @apply text-sm text-muted-foreground italic;
+}
+
+/* ── Feedback Section ────────────────────────────────────────────────────── */
+.id-feedback-section {
+  @apply pt-10 mt-12 space-y-8;
+  border-top: 1px solid var(--surface-glass-border);
+}
+
+.id-feedback-header-group {
+  @apply mb-6;
+}
+
+.id-feedback-title {
+  @apply text-2xl font-bold tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+.id-feedback-subtitle {
+  @apply text-sm text-muted-foreground mt-1.5;
+}
+
+/* ── Cancelled Banner ────────────────────────────────────────────────────── */
+.id-cancelled-banner {
+  @apply p-5 rounded-xl flex flex-col gap-1;
+  background: hsl(40 96% 53% / 0.08);
+  border: 1px solid hsl(40 96% 53% / 0.25);
+  color: hsl(40 96% 58%);
+}
+
+.id-cancelled-title {
+  @apply font-semibold;
+}
+
+.id-cancelled-text {
+  @apply text-sm opacity-90;
+}
+
+/* ── Overall Assessment ──────────────────────────────────────────────────── */
+.id-overall-header {
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+}
+
+.id-overall-layout {
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-6;
+}
+
+.id-overall-title {
+  @apply text-2xl font-bold;
+  letter-spacing: -0.02em;
+}
+
+.id-overall-desc {
+  @apply mt-2 text-base text-muted-foreground leading-relaxed;
+}
+
+.id-score-box {
+  @apply shrink-0 text-center p-5 rounded-xl;
+  background: var(--surface-glass);
+  border: 1px solid var(--surface-glass-border);
+  box-shadow:
+    0 4px 12px hsl(0 0% 0% / 0.1),
+    0 0 20px hsl(248 90% 66% / 0.12);
+  min-width: 90px;
+}
+
+.id-score-val {
+  @apply text-4xl font-black;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.id-score-label {
+  @apply text-xs text-muted-foreground uppercase tracking-widest mt-2;
+}
+
+.id-summary-content {
+  @apply pt-6;
+}
+
+.id-summary-text {
+  @apply text-foreground/90 leading-relaxed;
+}
+
+/* ── Categories & Lists ──────────────────────────────────────────────────── */
+.id-categories-title {
+  @apply text-lg font-bold mb-4;
+  letter-spacing: -0.01em;
+}
+
+.id-categories-grid {
+  @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3;
+}
+
+.id-lists-grid {
+  @apply grid sm:grid-cols-2 gap-5;
+}
+
+.id-card-strengths {
+  background: hsl(160 84% 42% / 0.06) !important;
+  border-color: hsl(160 84% 42% / 0.25) !important;
+}
+
+.id-card-weaknesses {
+  background: hsl(0 84% 60% / 0.06) !important;
+  border-color: hsl(0 84% 60% / 0.25) !important;
+}
+
+.id-list-title-strengths {
+  @apply flex items-center gap-2 font-semibold;
+  color: hsl(160 84% 48%);
+}
+
+.id-list-title-weaknesses {
+  @apply flex items-center gap-2 font-semibold;
+  color: hsl(0 84% 60%);
+}
+
+.id-list-title-icon {
+  @apply text-lg;
+}
+
+.id-list {
+  @apply space-y-2.5 text-sm;
+}
+
+.id-list-item-strength {
+  @apply pl-4 relative text-foreground/90 leading-relaxed;
+}
+.id-list-item-strength::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: hsl(160 84% 48%);
+}
+
+.id-list-item-weakness {
+  @apply pl-4 relative text-foreground/90 leading-relaxed;
+}
+.id-list-item-weakness::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: hsl(0 84% 60%);
+}
+
+.id-list-empty {
+  @apply text-muted-foreground italic text-sm;
+}
+
+/* ── Suggestions ─────────────────────────────────────────────────────────── */
+.id-card-suggestions-title {
+  @apply flex items-center gap-2 font-semibold;
+  color: hsl(40 96% 58%);
+}
+
+.id-suggestions-list {
+  @apply space-y-4 text-sm;
+}
+
+.id-suggestion-item {
+  @apply flex gap-3 leading-relaxed;
+}
+
+.id-suggestion-num {
+  @apply shrink-0 font-bold;
+  color: hsl(40 96% 58%);
+}
+
+.id-suggestion-text {
+  @apply leading-relaxed text-foreground/90;
+}
+
+/* ── Score Circle Component ──────────────────────────────────────────────── */
+.id-score-circle {
+  @apply flex flex-col items-center justify-center p-4 rounded-xl;
+  background: var(--surface-glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--surface-glass-border);
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.id-score-circle:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px hsl(0 0% 0% / 0.1), 0 0 12px hsl(248 90% 66% / 0.12);
+}
+
+.id-score-circle-inner {
+  @apply flex items-center justify-center w-12 h-12 rounded-full border-2 mb-2;
+}
+
+.id-score-circle-val {
+  @apply text-lg font-bold;
+}
+
+.id-score-circle-label {
+  @apply text-xs text-center text-muted-foreground font-medium uppercase tracking-wider;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.id-badge-common {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize;
+  border: 1px solid;
+}
+
+/* ── Loading & Error States ─────────────────────────────────────────────── */
+.id-loading-container {
+  @apply min-h-screen flex items-center justify-center;
+  background: hsl(var(--background));
+}
+
+.id-loading-content {
+  @apply flex flex-col items-center gap-4;
+}
+
+.id-loading-spinner {
+  @apply h-8 w-8 animate-spin rounded-full;
+  border: 2px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.3);
+}
+
+.id-loading-text {
+  @apply text-sm text-muted-foreground;
+}
+
+.id-error-container {
+  @apply min-h-screen flex items-center justify-center px-4;
+  background: hsl(var(--background));
+}
+
+.id-error-content {
+  @apply text-center space-y-4 max-w-sm;
+}
+
+.id-error-title {
+  @apply text-foreground font-semibold;
+}
+
+.id-error-text {
+  @apply text-sm text-muted-foreground;
+}

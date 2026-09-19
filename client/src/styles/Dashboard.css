@@ -1,0 +1,139 @@
+/* ── Dashboard Layout ───────────────────────────────────────────────────── */
+.dashboard-container {
+  @apply min-h-screen flex flex-col;
+  background: hsl(var(--background));
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Ambient mesh background */
+.dashboard-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 15% -5%, hsl(248 90% 66% / 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at 85% 105%, hsl(280 80% 68% / 0.08) 0%, transparent 55%);
+}
+
+.dashboard-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.dashboard-header-inner {
+  @apply mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center justify-between;
+}
+
+.dashboard-logo {
+  @apply font-black tracking-tight;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Nav */
+.dashboard-nav {
+  @apply flex items-center gap-1;
+}
+
+.dashboard-nav-divider {
+  @apply ml-2 h-4 w-px bg-border;
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
+.dashboard-main {
+  @apply flex-1 flex items-center justify-center px-4 py-20;
+}
+
+.dashboard-content {
+  @apply w-full max-w-lg text-center space-y-8;
+  animation: fadeInUp 0.6s ease both;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+.dashboard-title-group {
+  @apply space-y-3;
+}
+
+.dashboard-subtitle {
+  @apply text-xs font-semibold uppercase tracking-widest;
+  color: hsl(var(--primary));
+  letter-spacing: 0.18em;
+}
+
+.dashboard-title {
+  @apply text-4xl sm:text-5xl font-bold tracking-tight;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.15;
+}
+
+.dashboard-description {
+  @apply text-muted-foreground text-base max-w-sm mx-auto leading-relaxed;
+}
+
+.dashboard-action {
+  @apply pt-2;
+}
+
+/* ── Stats Grid ──────────────────────────────────────────────────────────── */
+.dashboard-stats-grid {
+  @apply grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3;
+}
+
+.dashboard-stat-card {
+  @apply text-center py-6 px-4 rounded-xl;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-glass-border);
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-stat-card:hover {
+  transform: translateY(-4px);
+  border-color: hsl(248 90% 66% / 0.3);
+  box-shadow:
+    0 8px 24px hsl(0 0% 0% / 0.12),
+    0 0 16px hsl(248 90% 66% / 0.15);
+}
+
+.dashboard-stat-card:nth-child(1) { animation: fadeInUp 0.5s ease 0.1s both; }
+.dashboard-stat-card:nth-child(2) { animation: fadeInUp 0.5s ease 0.2s both; }
+.dashboard-stat-card:nth-child(3) { animation: fadeInUp 0.5s ease 0.3s both; }
+
+.dashboard-stat-content {
+  @apply p-0 flex flex-col items-center justify-center;
+}
+
+.dashboard-stat-value {
+  @apply text-3xl font-bold tracking-tight mb-1;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dashboard-stat-label {
+  @apply text-xs font-medium text-muted-foreground uppercase tracking-wider;
+}

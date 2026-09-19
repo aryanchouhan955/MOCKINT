@@ -6,9 +6,21 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
     <input
       type={type}
       className={cn(
-        'flex h-10 w-full rounded-md border border-input bg-input px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        'flex h-10 w-full rounded-lg border px-3 py-2 text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200',
         className
       )}
+      style={{
+        background: 'hsl(var(--input) / 0.6)',
+        borderColor: 'var(--surface-glass-border)',
+      }}
+      onFocus={e => {
+        e.target.style.borderColor = 'hsl(var(--ring) / 0.5)'
+        e.target.style.boxShadow = '0 0 0 3px hsl(var(--ring) / 0.12), 0 0 10px hsl(var(--ring) / 0.08)'
+      }}
+      onBlur={e => {
+        e.target.style.borderColor = 'var(--surface-glass-border)'
+        e.target.style.boxShadow = 'none'
+      }}
       ref={ref}
       {...props}
     />

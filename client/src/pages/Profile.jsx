@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { getInterviewHistory } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { ThemeToggle } from '../components/ThemeToggle'
+import '../styles/Profile.css'
 
 export default function Profile() {
   const { user, token, logout } = useAuth()
@@ -58,11 +60,12 @@ export default function Profile() {
   const displayName = user?.name || user?.email || 'User'
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground pb-20">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-tight">Profile</h1>
-          <div className="flex items-center gap-3">
+    <div className="prof-container">
+      <header className="prof-header">
+        <div className="prof-header-inner">
+          <h1 className="prof-title">Profile</h1>
+          <div className="prof-header-actions">
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
               Dashboard
             </Button>
@@ -73,23 +76,23 @@ export default function Profile() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-8">
+      <main className="prof-main">
         {/* User Info */}
-        <Card>
+        <Card className="prof-user-card">
           <CardHeader>
-            <CardTitle className="text-2xl">User Information</CardTitle>
+            <CardTitle className="prof-card-title">User Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="prof-info-content">
             <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Name</p>
-              <p className="text-base font-medium">{displayName}</p>
+              <p className="prof-info-label">Name</p>
+              <p className="prof-info-val">{displayName}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mb-1">Email</p>
-              <p className="text-base font-medium">{user?.email}</p>
+              <p className="prof-info-label">Email</p>
+              <p className="prof-info-val">{user?.email}</p>
             </div>
             
-            <div className="pt-4">
+            <div className="prof-actions">
               <Button variant="destructive" size="sm" onClick={handleLogout}>
                 Logout
               </Button>
@@ -99,24 +102,24 @@ export default function Profile() {
 
         {/* Stats */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">Your Progress</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="text-center py-6 px-4">
-              <CardContent className="p-0">
-                <p className="text-3xl font-bold text-foreground">{stats.interviews}</p>
-                <p className="text-sm text-muted-foreground mt-2 uppercase tracking-wider font-medium">Interviews</p>
+          <h2 className="prof-section-title">Your Progress</h2>
+          <div className="prof-stats-grid">
+            <Card className="prof-stat-card">
+              <CardContent className="prof-stat-content">
+                <p className="prof-stat-val">{stats.interviews}</p>
+                <p className="prof-stat-label">Interviews</p>
               </CardContent>
             </Card>
-            <Card className="text-center py-6 px-4">
-              <CardContent className="p-0">
-                <p className="text-3xl font-bold text-foreground">{stats.avgScore}</p>
-                <p className="text-sm text-muted-foreground mt-2 uppercase tracking-wider font-medium">Avg. Score</p>
+            <Card className="prof-stat-card">
+              <CardContent className="prof-stat-content">
+                <p className="prof-stat-val">{stats.avgScore}</p>
+                <p className="prof-stat-label">Avg. Score</p>
               </CardContent>
             </Card>
-            <Card className="text-center py-6 px-4">
-              <CardContent className="p-0">
-                <p className="text-3xl font-bold text-foreground">{stats.practiceHours}</p>
-                <p className="text-sm text-muted-foreground mt-2 uppercase tracking-wider font-medium">Practice Hours</p>
+            <Card className="prof-stat-card">
+              <CardContent className="prof-stat-content">
+                <p className="prof-stat-val">{stats.practiceHours}</p>
+                <p className="prof-stat-label">Practice Hours</p>
               </CardContent>
             </Card>
           </div>

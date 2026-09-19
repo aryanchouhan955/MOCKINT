@@ -1,0 +1,146 @@
+/* ── Create Interview Layout ─────────────────────────────────────────────── */
+.ci-container {
+  @apply min-h-screen flex flex-col;
+  background: hsl(var(--background));
+  position: relative;
+}
+
+/* Ambient glow */
+.ci-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 0%, hsl(248 90% 66% / 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, hsl(280 80% 68% / 0.07) 0%, transparent 50%);
+}
+
+.ci-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.ci-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.ci-header-inner {
+  @apply mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center justify-between;
+}
+
+.ci-logo {
+  @apply font-black tracking-tight cursor-pointer transition-opacity duration-150;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+.ci-logo:hover { opacity: 0.8; }
+
+.ci-back-btn {
+  @apply text-sm text-muted-foreground hover:text-foreground transition-colors duration-150;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
+.ci-main {
+  @apply flex-1 flex items-start justify-center px-4 py-12;
+}
+
+.ci-content {
+  @apply w-full max-w-xl;
+  animation: fadeInUp 0.55s ease both;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+.ci-title-group {
+  @apply mb-8;
+}
+
+.ci-subtitle {
+  @apply text-xs font-semibold uppercase tracking-widest mb-2;
+  color: hsl(var(--primary));
+  letter-spacing: 0.18em;
+}
+
+.ci-title {
+  @apply text-3xl font-bold tracking-tight;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+}
+
+.ci-description {
+  @apply text-sm text-muted-foreground mt-2 leading-relaxed;
+}
+
+/* ── Form Card ───────────────────────────────────────────────────────────── */
+/* The wrapping Card gets glassmorphism via override */
+.ci-content > div > [class*='card'],
+.ci-content .card {
+  background: var(--surface-glass) !important;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid var(--surface-glass-border) !important;
+  box-shadow:
+    0 4px 6px hsl(0 0% 0% / 0.1),
+    0 16px 32px hsl(248 90% 66% / 0.08);
+}
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+.ci-form {
+  @apply space-y-5;
+}
+
+.ci-error {
+  @apply rounded-lg px-4 py-3 text-sm;
+  background: hsl(0 84% 60% / 0.1);
+  border: 1px solid hsl(0 84% 60% / 0.3);
+  color: hsl(0 84% 65%);
+}
+
+.ci-field-group {
+  @apply space-y-1.5;
+}
+
+.ci-field-hint {
+  @apply text-xs text-muted-foreground mt-1;
+}
+
+.ci-field-hint-right {
+  @apply text-xs text-muted-foreground text-right mt-1;
+}
+
+.ci-row {
+  @apply grid grid-cols-2 gap-4;
+}
+
+/* ── Loading States ──────────────────────────────────────────────────────── */
+.ci-submit-loading {
+  @apply flex items-center gap-2;
+}
+
+.ci-loading-spinner {
+  @apply h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white;
+}
+
+.ci-loading-text {
+  @apply text-center text-xs text-muted-foreground mt-3;
+  animation: fadeIn 0.4s ease both;
+}

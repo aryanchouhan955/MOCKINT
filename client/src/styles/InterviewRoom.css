@@ -1,0 +1,432 @@
+/* ── Interview Room Layout ───────────────────────────────────────────────── */
+.ir-container {
+  @apply min-h-screen flex flex-col;
+  background: hsl(var(--background));
+  position: relative;
+}
+
+.ir-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 5% -5%, hsl(248 90% 66% / 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 40% at 95% 105%, hsl(280 80% 68% / 0.06) 0%, transparent 50%);
+}
+
+.ir-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Sticky Top Header ───────────────────────────────────────────────────── */
+.ir-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.ir-header-top {
+  @apply mx-auto max-w-7xl px-4 sm:px-6 h-16;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Brand group — left column */
+.ir-brand-group {
+  @apply flex items-center;
+}
+
+/* Center column — role absolutely centered */
+.ir-header-center {
+  @apply flex items-center justify-center;
+}
+
+/* Centered role text */
+.ir-role-centered {
+  @apply font-semibold text-foreground truncate;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  max-width: 280px;
+}
+
+/* MOCKINT brand — large, bold, gradient */
+.ir-brand {
+  @apply font-black tracking-tight shrink-0;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Role pill — contains role text + difficulty badge */
+.ir-role-pill {
+  @apply flex items-center gap-2 px-3 py-1 rounded-full;
+  background: hsl(248 90% 66% / 0.08);
+  border: 1px solid hsl(248 90% 66% / 0.18);
+}
+
+.ir-role-text {
+  @apply text-sm font-semibold text-foreground truncate max-w-[220px];
+}
+
+/* Right side of header */
+.ir-header-right {
+  @apply flex items-center gap-3 justify-end shrink-0;
+}
+
+/* Timer box */
+.ir-timer-box {
+  @apply text-sm tabular-nums font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: hsl(0 0% 0% / 0.15);
+  border: 1px solid var(--surface-glass-border);
+  letter-spacing: 0.05em;
+}
+
+.ir-timer-icon {
+  @apply w-3.5 h-3.5 opacity-60;
+}
+
+/* ── Progress Row ────────────────────────────────────────────────────────── */
+.ir-progress-row {
+  @apply mx-auto max-w-7xl px-4 sm:px-6 pb-3 flex items-center gap-4;
+}
+
+.ir-progress-text {
+  @apply text-xs text-muted-foreground uppercase tracking-widest font-bold shrink-0;
+}
+
+.ir-progress-bar-bg {
+  @apply flex-1 h-1.5 rounded-full overflow-hidden;
+  background: hsl(var(--border));
+}
+
+.ir-progress-bar-fill {
+  @apply h-full rounded-full transition-all duration-700;
+  background: var(--gradient-primary);
+  box-shadow: 0 0 8px hsl(248 90% 66% / 0.5);
+}
+
+.ir-progress-remaining {
+  @apply text-xs text-muted-foreground shrink-0;
+}
+
+/* ── Main Area ───────────────────────────────────────────────────────────── */
+.ir-main {
+  @apply flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-6 pb-28;
+}
+
+/* Two-column grid — panels equal height via align-items: stretch */
+.ir-grid {
+  @apply grid grid-cols-1 lg:grid-cols-2 gap-5;
+  align-items: stretch;
+}
+
+/* ── Panels ──────────────────────────────────────────────────────────────── */
+.ir-panel {
+  @apply flex flex-col rounded-2xl p-5;
+  gap: 0.875rem;
+  background: var(--surface-glass);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid var(--surface-glass-border);
+  box-shadow:
+    0 4px 6px hsl(0 0% 0% / 0.08),
+    0 12px 24px hsl(0 0% 0% / 0.06);
+}
+
+.ir-panel-label-row {
+  @apply flex items-center gap-2;
+}
+
+.ir-panel-label-dot {
+  @apply h-2 w-2 rounded-full;
+}
+
+.ir-panel-label-text {
+  @apply text-xs font-bold uppercase tracking-widest text-muted-foreground;
+}
+
+.ir-panel-status-active {
+  @apply ml-auto text-xs font-semibold animate-pulse;
+}
+
+.ir-panel-status-loading {
+  @apply ml-auto text-xs text-muted-foreground;
+}
+
+/* ── Avatars ─────────────────────────────────────────────────────────────── */
+.ir-avatar-wrapper {
+  @apply flex justify-center py-1;
+}
+
+.ir-avatar {
+  @apply relative w-20 h-20 rounded-full flex items-center justify-center border-2 transition-colors;
+  background: hsl(var(--secondary));
+  box-shadow: 0 0 0 4px hsl(248 90% 66% / 0.08);
+}
+
+.ir-avatar-icon {
+  @apply w-10 h-10;
+}
+
+.ir-avatar-bars {
+  @apply absolute -bottom-3 flex items-end gap-0.5 h-4;
+}
+
+/* ── Interviewer Text Box ────────────────────────────────────────────────── */
+.ir-content-col {
+  @apply flex flex-col gap-2 flex-1;
+}
+
+.ir-topic {
+  @apply text-xs font-bold text-muted-foreground uppercase tracking-wide;
+}
+
+/* Text box fixed height — both panels aligned */
+.ir-text-box {
+  @apply rounded-xl p-4 overflow-y-auto;
+  background: hsl(var(--background) / 0.5);
+  border: 1px solid var(--surface-glass-border);
+  min-height: 160px;
+  max-height: 200px;
+  flex: 1;
+}
+
+.ir-text {
+  @apply text-sm sm:text-base text-foreground leading-relaxed whitespace-pre-wrap;
+}
+
+/* ── Interviewer Controls (Play / Replay) ────────────────────────────────── */
+.ir-controls-row {
+  @apply flex flex-wrap items-center gap-2 mt-auto pt-1;
+}
+
+.ir-control-btn {
+  @apply gap-1.5;
+}
+
+/* ── User Answer Column ──────────────────────────────────────────────────── */
+.ir-answer-col {
+  @apply flex flex-col gap-2 flex-1;
+}
+
+.ir-answer-label-row {
+  @apply text-xs font-bold text-muted-foreground uppercase tracking-wide flex items-center justify-between;
+}
+
+.ir-answer-hint {
+  @apply font-normal normal-case tracking-normal text-xs opacity-60;
+}
+
+/* Voice transcript box — same height as text box */
+.ir-voice-box {
+  @apply rounded-xl p-4 overflow-y-auto text-sm leading-relaxed;
+  border: 1px solid hsl(248 90% 66% / 0.35);
+  background: hsl(248 90% 66% / 0.04);
+  box-shadow: 0 0 12px hsl(248 90% 66% / 0.08), inset 0 0 16px hsl(248 90% 66% / 0.04);
+  min-height: 160px;
+  max-height: 200px;
+}
+
+.ir-voice-status-row {
+  @apply flex items-center gap-2 mb-2;
+}
+
+.ir-voice-dot {
+  @apply inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse;
+  box-shadow: 0 0 6px hsl(0 84% 60% / 0.6);
+}
+
+/* Textarea — same height as text box */
+.ir-textarea {
+  @apply w-full rounded-xl px-4 py-3 text-sm text-foreground leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none;
+  background: hsl(var(--background) / 0.5);
+  border: 1px solid var(--surface-glass-border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  min-height: 160px;
+  max-height: 200px;
+}
+
+.ir-textarea:focus {
+  border-color: hsl(248 90% 66% / 0.5);
+  box-shadow: 0 0 0 3px hsl(248 90% 66% / 0.12), 0 0 12px hsl(248 90% 66% / 0.08);
+}
+
+.ir-footer-info {
+  @apply flex items-center justify-between;
+}
+
+/* Voice controls — below text box */
+.ir-user-controls-row {
+  @apply flex flex-wrap items-center gap-2 mt-auto pt-1;
+}
+
+/* ── Sticky Bottom Bar ───────────────────────────────────────────────────── */
+.ir-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  border-top: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.ir-bottom-bar-inner {
+  @apply mx-auto max-w-7xl px-6 sm:px-8 h-20 flex items-center justify-center gap-6;
+}
+
+/* Vertical divider between cancel/end group and skip/submit group */
+.ir-action-divider {
+  @apply h-8 w-px;
+  background: var(--surface-glass-border);
+}
+
+/* ── Action Buttons (circular icon + label) ─────────────────────────────── */
+.ir-action-btn {
+  @apply flex flex-col items-center gap-1.5 cursor-pointer border-none bg-transparent p-0;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.ir-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.ir-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.ir-action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Circle base */
+.ir-action-circle {
+  @apply flex items-center justify-center rounded-full;
+  width: 48px;
+  height: 48px;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+/* Cancel — red */
+.ir-action-circle-cancel {
+  background: hsl(0 84% 60% / 0.15);
+  border: 1.5px solid hsl(0 84% 60% / 0.4);
+  color: hsl(0 84% 62%);
+}
+.ir-action-btn.ir-action-cancel:hover:not(:disabled) .ir-action-circle-cancel {
+  background: hsl(0 84% 60% / 0.25);
+  box-shadow: 0 0 14px hsl(0 84% 60% / 0.35);
+}
+
+/* End — amber/yellow */
+.ir-action-circle-end {
+  background: hsl(40 96% 53% / 0.15);
+  border: 1.5px solid hsl(40 96% 53% / 0.4);
+  color: hsl(40 96% 56%);
+}
+.ir-action-btn.ir-action-end:hover:not(:disabled) .ir-action-circle-end {
+  background: hsl(40 96% 53% / 0.25);
+  box-shadow: 0 0 14px hsl(40 96% 53% / 0.35);
+}
+
+/* Skip — muted/gray */
+.ir-action-circle-skip {
+  background: hsl(var(--muted) / 0.5);
+  border: 1.5px solid var(--surface-glass-border);
+  color: hsl(var(--muted-foreground));
+}
+.ir-action-btn.ir-action-skip:hover:not(:disabled) .ir-action-circle-skip {
+  background: hsl(var(--secondary));
+  box-shadow: 0 0 10px hsl(0 0% 0% / 0.15);
+}
+
+/* Submit — indigo gradient (primary) */
+.ir-action-circle-submit {
+  background: var(--gradient-primary);
+  border: none;
+  color: white;
+  box-shadow: 0 0 12px hsl(248 90% 66% / 0.3);
+}
+.ir-action-btn.ir-action-submit:hover:not(:disabled) .ir-action-circle-submit {
+  box-shadow: 0 0 20px hsl(248 90% 66% / 0.55), 0 0 40px hsl(248 90% 66% / 0.2);
+}
+
+/* Label beneath circle */
+.ir-action-label {
+  @apply text-xs font-semibold text-muted-foreground;
+  letter-spacing: 0.02em;
+}
+
+.ir-action-label-submit {
+  color: hsl(var(--primary));
+}
+
+/* ── Loading / Error Pages ───────────────────────────────────────────────── */
+.ir-loading-page {
+  @apply min-h-screen flex items-center justify-center;
+  background: hsl(var(--background));
+}
+
+.ir-loading-content {
+  @apply flex flex-col items-center gap-4;
+}
+
+.ir-loading-spinner {
+  @apply h-8 w-8 animate-spin rounded-full;
+  border: 2px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.3);
+}
+
+.ir-loading-text {
+  @apply text-sm text-muted-foreground;
+}
+
+.ir-error-page {
+  @apply min-h-screen flex items-center justify-center px-4;
+  background: hsl(var(--background));
+}
+
+.ir-error-content {
+  @apply text-center space-y-4 max-w-sm;
+}
+
+.ir-error-404 {
+  @apply text-5xl font-black;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ir-error-title {
+  @apply text-foreground font-semibold;
+}
+
+.ir-error-desc {
+  @apply text-sm text-muted-foreground;
+}
+
+.ir-success-icon {
+  @apply text-4xl;
+}
+
+.ir-success-title {
+  @apply text-foreground font-bold;
+}

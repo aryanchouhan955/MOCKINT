@@ -12,6 +12,8 @@ import {
 } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Textarea } from '../components/ui/textarea'
+import { ThemeToggle } from '../components/ThemeToggle'
+import '../styles/InterviewRoom.css'
 
 // ─── Interview states ─────────────────────────────────────────────────────────
 const STATE = {
@@ -495,14 +497,51 @@ export default function InterviewRoom() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [pageState, answer, handleSubmitAnswer])
 
+  // ── Skip question ────────────────────────────────────────────────────────────
+  const handleSkip = useCallback(async () => {
+    if (submittingRef.current) return
+    if (isVoiceActive || isVoiceBusy) {
+      setAnswerError('Please stop voice answering before skipping.')
+      return
+    }
+    submittingRef.current = true
+    setPageState(STATE.SUBMITTING)
+    setAnswerError('')
+
+    const { data, error } = await apiSubmitAnswer(id, { answer: '(skipped)' }, token)
+
+    submittingRef.current = false
+
+    if (error) {
+      setAnswerError(error)
+      setPageState(STATE.ACTIVE)
+      return
+    }
+
+    const payload = data.data
+
+    if (payload.status === 'ready_to_complete') {
+      setAnswer('')
+      setPageState(STATE.ACTIVE)
+      setConfirmDialog('end')
+      return
+    }
+
+    setCurrentQuestion(payload.question)
+    setQuestionsAsked(payload.questionsAsked)
+    setAnswer('')
+    setPageState(STATE.ACTIVE)
+  }, [id, token, isVoiceActive, isVoiceBusy])
+
+
   // ─── Render states ──────────────────────────────────────────────────────────
 
   if (pageState === STATE.LOADING) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading interview…</p>
+      <div className="ir-loading-page">
+        <div className="ir-loading-content">
+          <div className="ir-loading-spinner" />
+          <p className="ir-loading-text">Loading interview…</p>
         </div>
       </div>
     )
@@ -510,10 +549,10 @@ export default function InterviewRoom() {
 
   if (pageState === STATE.NOT_FOUND) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4">
-          <p className="text-4xl font-bold text-foreground">404</p>
-          <p className="text-muted-foreground">Interview not found.</p>
+      <div className="ir-error-page">
+        <div className="ir-error-content">
+          <p className="ir-error-404">404</p>
+          <p className="ir-error-desc">Interview not found.</p>
           <Button onClick={() => navigate('/dashboard')} variant="outline" size="sm">
             Back to Dashboard
           </Button>
@@ -524,10 +563,10 @@ export default function InterviewRoom() {
 
   if (pageState === STATE.ERROR) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <p className="text-foreground font-medium">Something went wrong</p>
-          <p className="text-sm text-muted-foreground">{errorMessage}</p>
+      <div className="ir-error-page">
+        <div className="ir-error-content">
+          <p className="ir-error-title">Something went wrong</p>
+          <p className="ir-error-desc">{errorMessage}</p>
           <Button onClick={() => navigate('/dashboard')} variant="outline" size="sm">
             Back to Dashboard
           </Button>
@@ -538,11 +577,11 @@ export default function InterviewRoom() {
 
   if (pageState === STATE.COMPLETED) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <div className="text-3xl">✓</div>
-          <p className="text-foreground font-semibold">Interview Complete</p>
-          <p className="text-sm text-muted-foreground">
+      <div className="ir-error-page">
+        <div className="ir-error-content">
+          <div className="ir-success-icon">✓</div>
+          <p className="ir-success-title">Interview Complete</p>
+          <p className="ir-error-desc">
             Your feedback is being prepared. Redirecting…
           </p>
         </div>
@@ -552,9 +591,9 @@ export default function InterviewRoom() {
 
   if (pageState === STATE.CANCELLED) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <p className="text-foreground font-semibold">Interview Cancelled</p>
+      <div className="ir-error-page">
+        <div className="ir-error-content">
+          <p className="ir-success-title">Interview Cancelled</p>
           <Button onClick={() => navigate('/dashboard')} variant="outline" size="sm">
             Back to Dashboard
           </Button>
@@ -576,18 +615,13 @@ export default function InterviewRoom() {
 
   return (
     <>
-      <audio 
+      <audio
         ref={audioRef}
-        src={audioUrl || undefined} 
+        src={audioUrl || undefined}
         onPlay={() => setAudioState('playing')}
         onPause={() => setAudioState('paused')}
         onEnded={() => setAudioState('idle')}
-        onError={(e) => {
-          if (audioUrl) {
-             setAudioState('error')
-             console.error('Audio playback error')
-          }
-        }}
+        onError={() => { if (audioUrl) { setAudioState('error'); console.error('Audio playback error') } }}
         className="hidden"
       />
 
@@ -613,228 +647,309 @@ export default function InterviewRoom() {
         />
       )}
 
-      <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <header className="border-b border-border">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6 h-14 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-base font-semibold tracking-tight text-foreground">
-                AI Interviewer
-              </span>
+      <div className="ir-container">
+        {/* ── Sticky Top Header ── */}
+        <header className="ir-header">
+          {/* Row 1: MOCKINT (left) · Role (center) · Difficulty + Timer (right) */}
+          <div className="ir-header-top">
+
+            {/* Left: Brand */}
+            <div className="ir-brand-group">
+              <span className="ir-brand">MOCKINT</span>
+            </div>
+
+            {/* Center: Target Role */}
+            <div className="ir-header-center">
               {interview?.role && (
-                <>
-                  <span className="text-border">·</span>
-                  <span className="text-sm text-muted-foreground truncate max-w-[180px]">
-                    {interview.role}
-                  </span>
-                </>
+                <span className="ir-role-centered">{interview.role}</span>
               )}
+            </div>
+
+            {/* Right: Difficulty + Theme toggle + Timer */}
+            <div className="ir-header-right">
               {interview?.difficulty && (
                 <DifficultyBadge difficulty={interview.difficulty} />
               )}
+              <ThemeToggle />
+              <div className={`ir-timer-box ${timerColor}`}>
+                <svg className="ir-timer-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>{timerExpired ? <span className="text-rose-400">Time&apos;s up</span> : formatTime(remaining)}</span>
+              </div>
             </div>
 
-            {/* Timer */}
-            <div className={`text-sm font-mono tabular-nums font-medium ${timerColor}`}>
-              {timerExpired ? (
-                <span className="text-rose-400">Time&apos;s up</span>
-              ) : (
-                formatTime(remaining)
-              )}
-            </div>
           </div>
-        </header>
-
-        {/* Main */}
-        <main className="flex-1 mx-auto w-full max-w-3xl px-4 sm:px-6 py-10 flex flex-col gap-8">
-          {/* Progress */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+          {/* Row 2: progress */}
+          <div className="ir-progress-row">
+            <p className="ir-progress-text">
               Question {questionsAsked} of {totalQuestions}
             </p>
-            {/* Progress bar */}
-            <div className="flex-1 mx-6 h-1 bg-secondary rounded-full overflow-hidden">
+            <div className="ir-progress-bar-bg">
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, (questionsAsked / (interview?.questionCount || 1)) * 100)}%`,
-                }}
+                className="ir-progress-bar-fill"
+                style={{ width: `${Math.min(100, (questionsAsked / (interview?.questionCount || 1)) * 100)}%` }}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="ir-progress-remaining">
               {Math.max(0, (interview?.questionCount ?? 0) - questionsAsked)} remaining
             </p>
           </div>
+        </header>
 
-          {/* Question */}
-          <div className="rounded-lg border border-border bg-card p-6">
-            {currentQuestion?.topic && (
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">
-                {currentQuestion.topic}
-              </p>
-            )}
-            <p className="text-base sm:text-lg text-foreground leading-relaxed whitespace-pre-wrap">
-              {currentQuestion?.text ?? 'Loading question…'}
-            </p>
+        {/* ── Main two-column area ── */}
+        <main className="ir-main">
+          <div className="ir-grid">
 
-            {/* TTS Controls */}
-            {currentQuestion?.text && (
-              <div className="mt-4 pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={toggleAudio}
-                    disabled={audioState === 'loading' || !audioUrl}
-                  >
-                    {audioState === 'loading' ? 'Loading audio...' : (audioState === 'playing' ? '⏸ Pause' : '🔊 Play')}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={replayAudio}
-                    disabled={audioState === 'loading' || !audioUrl}
-                  >
-                    🔁 Replay
-                  </Button>
-                </div>
-                {autoplayBlocked && (
-                  <p className="text-xs text-amber-500 font-medium">Click Play to hear the question.</p>
+            {/* LEFT — Interviewer Panel */}
+            <div className="ir-panel">
+              {/* Label */}
+              <div className="ir-panel-label-row">
+                <span className="ir-panel-label-dot bg-primary/60" />
+                <span className="ir-panel-label-text">Interviewer</span>
+                {audioState === 'playing' && (
+                  <span className="ir-panel-status-active text-primary">Speaking…</span>
                 )}
-                {audioState === 'error' && (
-                  <p className="text-xs text-destructive">Audio unavailable.</p>
+                {audioState === 'loading' && (
+                  <span className="ir-panel-status-loading">Loading audio…</span>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Answer area */}
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <label htmlFor="answer-input" className="text-sm font-medium text-foreground">
-                Your Answer
-                <span className="ml-2 text-xs text-muted-foreground font-normal">
-                  (Ctrl+Enter to submit)
-                </span>
-              </label>
-
-              {!isVoiceActive && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleStartVoice}
-                  disabled={isSubmitting || timerExpired || isVoiceBusy}
-                >
-                  {isVoiceBusy
-                    ? (scribe.status === 'connecting' ? 'Connecting…' : 'Requesting microphone…')
-                    : '🎙 Start Voice Answer'}
-                </Button>
-              )}
-              {isVoiceActive && (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={handleCancelVoice} disabled={isStoppingVoice}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => scribe.clearTranscripts()}
-                    disabled={isStoppingVoice}
-                  >
-                    Try Again
-                  </Button>
-                  <Button size="sm" onClick={handleFinishVoice} disabled={isStoppingVoice}>
-                    {isStoppingVoice ? 'Stopping…' : '⏹ Stop Voice Answer'}
-                  </Button>
+              {/* Avatar */}
+              <div className="ir-avatar-wrapper">
+                <div className={`ir-avatar ${audioState === 'playing' ? 'border-primary avatar-speaking' : 'border-border'}`}>
+                  <svg className="ir-avatar-icon text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15M14.25 3.104c.251.023.501.05.75.082M19.8 15a2.25 2.25 0 01.217 3.424l-2.644 2.585A2.25 2.25 0 0115.75 21.75H8.25a2.25 2.25 0 01-1.623-.691L3.983 18.474A2.25 2.25 0 014.2 15m15.6 0H4.2" />
+                  </svg>
+                  {audioState === 'playing' && (
+                    <span className="ir-avatar-bars">
+                      {[1,2,3,4,5].map(i => (
+                        <span key={i} className={`inline-block w-1 rounded-full bg-primary bar-${i}`} style={{ height: '100%', transformOrigin: 'bottom' }} />
+                      ))}
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Question / Subtitles */}
+              <div className="ir-content-col">
+                {currentQuestion?.topic && (
+                  <span className="ir-topic">{currentQuestion.topic}</span>
+                )}
+                <div className="ir-text-box">
+                  <p className="ir-text">
+                    {currentQuestion?.text ?? 'Loading question…'}
+                  </p>
+                </div>
+
+                {/* TTS Controls */}
+                {currentQuestion?.text && (
+                  <div className="ir-controls-row">
+                    <Button variant="outline" size="sm" onClick={toggleAudio} disabled={audioState === 'loading' || !audioUrl} className="ir-control-btn">
+                      {audioState === 'loading' ? (
+                        <><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />Loading…</>
+                      ) : audioState === 'playing' ? (
+                        <><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><rect x="5" y="4" width="3" height="12" rx="1"/><rect x="12" y="4" width="3" height="12" rx="1"/></svg>Pause</>
+                      ) : (
+                        <><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>Play</>
+                      )}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={replayAudio} disabled={audioState === 'loading' || !audioUrl} className="ir-control-btn">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                      </svg>
+                      Replay
+                    </Button>
+                    {autoplayBlocked && <p className="text-xs text-amber-500 font-medium">Click Play to hear the question.</p>}
+                    {audioState === 'error' && <p className="text-xs text-destructive">Audio unavailable.</p>}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {voiceError && (
-              <p className="text-sm text-destructive">{voiceError}</p>
-            )}
-
-            {/* Voice-answer live transcript view (replaces the textarea while recording) */}
-            {isVoiceActive ? (
-              <div className="min-h-[180px] p-3 rounded-md border border-primary bg-card text-sm leading-relaxed overflow-y-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="text-xs text-muted-foreground">
+            {/* RIGHT — User Panel */}
+            <div className="ir-panel">
+              {/* Label */}
+              <div className="ir-panel-label-row">
+                <span className={`ir-panel-label-dot ${isVoiceActive ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground/40'}`} />
+                <span className="ir-panel-label-text">You</span>
+                {isVoiceActive && (
+                  <span className="ir-panel-status-active text-emerald-400">
                     {scribe.status === 'transcribing' ? 'Listening…' : 'Recording…'}
                   </span>
-                </div>
-                {scribe.committedTranscripts.map((t) => (
-                  <span key={t.id} className="text-foreground">{t.text} </span>
-                ))}
-                <span className="text-muted-foreground italic">
-                  {scribe.partialTranscript || (scribe.committedTranscripts.length ? '' : 'Start speaking…')}
-                </span>
-              </div>
-            ) : (
-              <Textarea
-                id="answer-input"
-                placeholder="Type your answer here…"
-                value={answer}
-                onChange={(e) => {
-                  setAnswer(e.target.value)
-                  if (answerError) setAnswerError('')
-                }}
-                disabled={isSubmitting || timerExpired}
-                className="min-h-[180px] text-sm leading-relaxed"
-              />
-            )}
-
-            <div className="flex items-center justify-between">
-              <div>
-                {answerError && (
-                  <p className="text-sm text-destructive">{answerError}</p>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {answer.length} / 3000
-              </p>
+
+              {/* Avatar */}
+              <div className="ir-avatar-wrapper">
+                <div className={`ir-avatar ${isVoiceActive ? 'border-emerald-400 avatar-listening' : 'border-border'}`}>
+                  <svg className="ir-avatar-icon text-muted-foreground/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                  </svg>
+                  {isVoiceActive && (
+                    <span className="ir-avatar-bars">
+                      {[1,2,3,4,5].map(i => (
+                        <span key={i} className={`inline-block w-1 rounded-full bg-emerald-400 bar-${i}`} style={{ height: '100%', transformOrigin: 'bottom' }} />
+                      ))}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {voiceError && <p className="text-sm text-destructive">{voiceError}</p>}
+
+              {/* Answer Area — text box first */}
+              <div className="ir-answer-col">
+                <label htmlFor="answer-input" className="ir-answer-label-row">
+                  <span>Your Answer</span>
+                  <span className="ir-answer-hint">Ctrl+Enter to submit</span>
+                </label>
+
+                {isVoiceActive ? (
+                  <div className="ir-voice-box">
+                    <div className="ir-voice-status-row">
+                      <span className="ir-voice-dot" />
+                      <span className="text-xs text-muted-foreground">{scribe.status === 'transcribing' ? 'Listening…' : 'Recording…'}</span>
+                    </div>
+                    {scribe.committedTranscripts.map((t) => (
+                      <span key={t.id} className="text-foreground">{t.text} </span>
+                    ))}
+                    <span className="text-muted-foreground italic">
+                      {scribe.partialTranscript || (scribe.committedTranscripts.length ? '' : 'Start speaking…')}
+                    </span>
+                  </div>
+                ) : (
+                  <textarea
+                    id="answer-input"
+                    placeholder="Type your answer here…"
+                    value={answer}
+                    onChange={(e) => { setAnswer(e.target.value); if (answerError) setAnswerError('') }}
+                    disabled={isSubmitting || timerExpired}
+                    className="ir-textarea"
+                  />
+                )}
+
+                <div className="ir-footer-info">
+                  <div>{answerError && <p className="text-sm text-destructive">{answerError}</p>}</div>
+                  <p className={`text-xs tabular-nums ${answer.length > 2800 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                    {answer.length} / 3000
+                  </p>
+                </div>
+
+                {/* Voice Controls — below text box, aligned with interviewer's Play/Replay */}
+                <div className="ir-user-controls-row">
+                  {!isVoiceActive && (
+                    <Button variant="secondary" size="sm" onClick={handleStartVoice} disabled={isSubmitting || timerExpired || isVoiceBusy} className="ir-control-btn">
+                      {isVoiceBusy ? (
+                        <><span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />{scribe.status === 'connecting' ? 'Connecting…' : 'Requesting mic…'}</>
+                      ) : (
+                        <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" /></svg>Start Voice Answer</>
+                      )}
+                    </Button>
+                  )}
+                  {isVoiceActive && (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => scribe.clearTranscripts()} disabled={isStoppingVoice} className="ir-control-btn">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                        Retry
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={handleCancelVoice} disabled={isStoppingVoice} className="ir-control-btn text-muted-foreground">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleFinishVoice} disabled={isStoppingVoice} className="ir-control-btn bg-emerald-600 hover:bg-emerald-700 text-white border-0">
+                        {isStoppingVoice ? (
+                          <><span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />Stopping…</>
+                        ) : (
+                          <><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><rect x="4" y="4" width="12" height="12" rx="2"/></svg>Stop Voice Answer</>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-
-            <Button
-              id="submit-answer"
-              onClick={handleSubmitAnswer}
-              disabled={isSubmitting || timerExpired || isVoiceActive || isVoiceBusy}
-              className="w-full sm:w-auto sm:self-end"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-                  Generating next question…
-                </span>
-              ) : (
-                'Submit Answer'
-              )}
-            </Button>
           </div>
+        </main>
 
-          {/* Footer actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-border mt-2">
+        {/* ── Sticky Bottom Bar ── */}
+        <div className="ir-bottom-bar">
+          <div className="ir-bottom-bar-inner">
+
+            {/* 1 — Cancel Interview: red circular phone-cut icon */}
             <button
               id="cancel-interview"
               onClick={() => setConfirmDialog('cancel')}
               disabled={isSubmitting}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              className="ir-action-btn ir-action-cancel"
+              title="Cancel Interview"
             >
-              Cancel interview
+              <span className="ir-action-circle ir-action-circle-cancel">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.712 4.33a9.027 9.027 0 011.652 1.306c.51.51.944 1.064 1.306 1.652M16.712 4.33l-3.448 4.138m3.448-4.138a9 9 0 00-12.728 0l4.138 3.448M4.33 7.288L7.777 10.736M4.33 7.288a9.027 9.027 0 00-1.652 1.652l4.138 3.448M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              <span className="ir-action-label">Cancel</span>
             </button>
 
-            <Button
+            {/* 2 — End Interview: yellow circular finish flag */}
+            <button
               id="end-interview"
-              variant="outline"
-              size="sm"
               onClick={() => setConfirmDialog('end')}
               disabled={isSubmitting}
+              className="ir-action-btn ir-action-end"
+              title="End Interview"
             >
-              End Interview
-            </Button>
+              <span className="ir-action-circle ir-action-circle-end">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                </svg>
+              </span>
+              <span className="ir-action-label">End</span>
+            </button>
+
+            <div className="ir-action-divider" />
+
+            {/* 3 — Skip Answer */}
+            <button
+              id="skip-question"
+              onClick={handleSkip}
+              disabled={isSubmitting || timerExpired}
+              className="ir-action-btn ir-action-skip"
+              title="Skip Answer"
+            >
+              <span className="ir-action-circle ir-action-circle-skip">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061A1.125 1.125 0 013 16.811V8.69zM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 010 1.954l-7.108 4.061a1.125 1.125 0 01-1.683-.977V8.69z" />
+                </svg>
+              </span>
+              <span className="ir-action-label">Skip</span>
+            </button>
+
+            {/* 4 — Submit Answer */}
+            <button
+              id="submit-answer"
+              onClick={handleSubmitAnswer}
+              disabled={isSubmitting || timerExpired || isVoiceActive || isVoiceBusy}
+              className="ir-action-btn ir-action-submit"
+              title="Submit Answer"
+            >
+              <span className="ir-action-circle ir-action-circle-submit">
+                {isSubmitting ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                )}
+              </span>
+              <span className="ir-action-label ir-action-label-submit">{isSubmitting ? 'Generating…' : 'Submit'}</span>
+            </button>
+
           </div>
-        </main>
+        </div>
       </div>
     </>
   )
 }
+

@@ -1,0 +1,101 @@
+/* ── Auth Pages Layout (Login & Signup) ─────────────────────────────────── */
+
+/* Full-screen ambient background */
+.auth-container {
+  @apply min-h-screen flex flex-col items-center justify-center px-4;
+  background: hsl(var(--background));
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient radial glows behind the card */
+.auth-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 0%, hsl(248 90% 66% / 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 100%, hsl(280 80% 68% / 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 50% 50%, hsl(320 75% 68% / 0.05) 0%, transparent 50%);
+}
+
+.auth-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Brand / Logo */
+.auth-brand {
+  @apply mb-8 text-center;
+  animation: fadeInUp 0.5s ease both;
+}
+
+.auth-logo {
+  @apply font-black tracking-tight;
+  font-size: 1.6rem;
+  letter-spacing: -0.05em;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card — glassmorphism */
+.auth-card {
+  @apply w-full max-w-sm;
+  background: var(--surface-glass) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--surface-glass-border) !important;
+  box-shadow:
+    0 4px 6px -1px hsl(0 0% 0% / 0.15),
+    0 20px 40px -8px hsl(248 90% 66% / 0.12),
+    inset 0 1px 0 hsl(0 0% 100% / 0.06);
+  animation: fadeInUp 0.55s ease 0.05s both;
+}
+
+/* Form */
+.auth-form {
+  @apply space-y-4;
+}
+
+/* Error alert */
+.auth-error {
+  @apply rounded-lg px-4 py-3 text-sm;
+  background: hsl(0 84% 60% / 0.1);
+  border: 1px solid hsl(0 84% 60% / 0.3);
+  color: hsl(0 84% 65%);
+  box-shadow: 0 0 10px hsl(0 84% 60% / 0.1);
+}
+
+/* Field groups */
+.auth-field-group {
+  @apply space-y-1.5;
+}
+
+/* Submit button loading state */
+.auth-submit-loading {
+  @apply flex items-center gap-2;
+}
+
+.auth-loading-spinner {
+  @apply h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white;
+}
+
+/* Footer link row */
+.auth-footer {
+  @apply mt-5 text-center text-sm text-muted-foreground;
+}
+
+.auth-link {
+  @apply font-medium transition-colors duration-150;
+  color: hsl(var(--primary));
+}
+.auth-link:hover {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  filter: brightness(1.2);
+}

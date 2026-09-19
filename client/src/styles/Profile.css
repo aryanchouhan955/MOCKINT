@@ -1,0 +1,136 @@
+/* ── Profile Layout ──────────────────────────────────────────────────────── */
+.prof-container {
+  @apply min-h-screen pb-20;
+  background: hsl(var(--background));
+  position: relative;
+}
+
+/* Ambient glow */
+.prof-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 65% 45% at 5% 0%, hsl(248 90% 66% / 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 95% 100%, hsl(280 80% 68% / 0.06) 0%, transparent 50%);
+}
+
+.prof-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.prof-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.prof-header-inner {
+  @apply mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between;
+}
+
+.prof-title {
+  @apply text-xl font-bold tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+.prof-header-actions {
+  @apply flex items-center gap-3;
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
+.prof-main {
+  @apply mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-8;
+  animation: fadeInUp 0.55s ease both;
+}
+
+/* ── Card Overrides (glassmorphism) ──────────────────────────────────────── */
+.prof-user-card {
+  background: var(--surface-glass) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--surface-glass-border) !important;
+  box-shadow:
+    0 4px 6px hsl(0 0% 0% / 0.08),
+    0 12px 24px hsl(248 90% 66% / 0.06);
+}
+
+.prof-card-title {
+  @apply text-2xl font-bold;
+  letter-spacing: -0.02em;
+}
+
+/* ── User Info Section ───────────────────────────────────────────────────── */
+.prof-info-content {
+  @apply space-y-5;
+}
+
+.prof-info-label {
+  @apply text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1;
+}
+
+.prof-info-val {
+  @apply text-base font-semibold text-foreground;
+}
+
+.prof-actions {
+  @apply pt-5 border-t;
+  border-color: var(--surface-glass-border);
+}
+
+/* ── Progress Stats Section ──────────────────────────────────────────────── */
+.prof-section-title {
+  @apply text-lg font-bold mb-5;
+  letter-spacing: -0.01em;
+}
+
+.prof-stats-grid {
+  @apply grid grid-cols-1 sm:grid-cols-3 gap-4;
+}
+
+.prof-stat-card {
+  @apply text-center py-8 px-4 rounded-xl;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-glass-border);
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.prof-stat-card:hover {
+  transform: translateY(-4px);
+  border-color: hsl(248 90% 66% / 0.3);
+  box-shadow:
+    0 8px 24px hsl(0 0% 0% / 0.1),
+    0 0 16px hsl(248 90% 66% / 0.12);
+}
+
+.prof-stat-card:nth-child(1) { animation: fadeInUp 0.5s ease 0.1s both; }
+.prof-stat-card:nth-child(2) { animation: fadeInUp 0.5s ease 0.2s both; }
+.prof-stat-card:nth-child(3) { animation: fadeInUp 0.5s ease 0.3s both; }
+
+.prof-stat-content {
+  @apply p-0;
+}
+
+.prof-stat-val {
+  @apply text-4xl font-black tracking-tight;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+}
+
+.prof-stat-label {
+  @apply text-xs text-muted-foreground mt-3 uppercase tracking-wider font-semibold;
+}

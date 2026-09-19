@@ -1,0 +1,13 @@
+
+1. PDF/DOCx resume upload feature in ./interview/create
+
+2. Improve LLM Prompt to make interview more realastic and accurate
+
+3. Cancel interview should not generate feedback and should not be stored in user's history
+
+4. In interview history, the interviews should should show the time with the date of interview 
+
+
+
+
+

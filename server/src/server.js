@@ -7,7 +7,8 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.CLIENT_URL || "*" }));
+// Cross-Origin Resource Sharing (CORS): Configures which origins (web client URLs) are allowed to make requests to your server.
+app.use(cors({ origin: process.env.CLIENT_URL || "*" })); // ensure that in production, only requests originating from your official web client URL are permitted to make API calls to your server.
 app.use(express.json());
 
 // ─── Database Connection ───────────────────────────────────────────────────────

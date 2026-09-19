@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getInterview } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
+import '../styles/Feedback.css'
 
 function ScoreCircle({ score, label }) {
   const isNa = score === 'insufficient_evidence' || score === null || score === undefined
@@ -17,11 +18,11 @@ function ScoreCircle({ score, label }) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card shadow-sm">
-      <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 mb-2 ${color}`}>
-        <span className="text-lg font-bold">{displayScore}</span>
+    <div className="fb-score-circle">
+      <div className={`fb-score-circle-inner ${color}`}>
+        <span className="fb-score-circle-val">{displayScore}</span>
       </div>
-      <span className="text-xs text-center text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
+      <span className="fb-score-circle-label">{label}</span>
     </div>
   )
 }
@@ -59,10 +60,10 @@ export default function Feedback() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading feedback…</p>
+      <div className="fb-loading-container">
+        <div className="fb-loading-content">
+          <div className="fb-loading-spinner" />
+          <p className="fb-loading-text">Loading feedback…</p>
         </div>
       </div>
     )
@@ -70,10 +71,10 @@ export default function Feedback() {
 
   if (error || !interview) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <p className="text-foreground font-medium">Unable to load feedback</p>
-          <p className="text-sm text-muted-foreground">{error || 'Interview not found'}</p>
+      <div className="fb-error-container">
+        <div className="fb-error-content">
+          <p className="fb-error-title">Unable to load feedback</p>
+          <p className="fb-error-text">{error || 'Interview not found'}</p>
           <Button onClick={() => navigate('/dashboard')} variant="outline" size="sm">
             Back to Dashboard
           </Button>
@@ -86,15 +87,15 @@ export default function Feedback() {
   const isCancelled = status === 'cancelled'
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="fb-container">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between">
+      <header className="fb-header">
+        <div className="fb-header-inner">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">Interview Feedback</h1>
-            <p className="text-sm text-muted-foreground">{role} · {difficulty}</p>
+            <h1 className="fb-title">Interview Feedback</h1>
+            <p className="fb-subtitle">{role} · {difficulty}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="fb-header-actions">
             <Button variant="outline" size="sm" onClick={() => navigate('/history')}>
               View History
             </Button>
@@ -105,44 +106,44 @@ export default function Feedback() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-8">
+      <main className="fb-main">
         
         {isCancelled && (
-          <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 flex flex-col gap-1">
-            <h3 className="font-semibold">Interview Cancelled</h3>
-            <p className="text-sm opacity-90">This interview was cancelled early. The feedback below is based on limited evidence.</p>
+          <div className="fb-cancelled-banner">
+            <h3 className="fb-cancelled-title">Interview Cancelled</h3>
+            <p className="fb-cancelled-text">This interview was cancelled early. The feedback below is based on limited evidence.</p>
           </div>
         )}
 
         {!feedback ? (
-          <Card className="p-8 text-center bg-muted/20 border-dashed">
+          <Card className="fb-no-feedback">
             <p className="text-muted-foreground">No feedback was generated for this interview.</p>
           </Card>
         ) : (
           <>
             {/* Overall & Summary */}
             <Card>
-              <CardHeader className="border-b border-border bg-muted/10">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardHeader className="fb-overall-header">
+                <div className="fb-overall-layout">
                   <div>
-                    <CardTitle className="text-2xl">Overall Assessment</CardTitle>
-                    <CardDescription className="mt-1.5 text-base">{feedback.overall?.comment}</CardDescription>
+                    <CardTitle className="fb-overall-title">Overall Assessment</CardTitle>
+                    <CardDescription className="fb-overall-desc">{feedback.overall?.comment}</CardDescription>
                   </div>
-                  <div className="shrink-0 text-center bg-card border border-border p-3 rounded-lg shadow-sm">
-                    <div className="text-3xl font-bold">{feedback.overall?.score !== 'insufficient_evidence' ? feedback.overall?.score : 'N/A'}</div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Score</div>
+                  <div className="fb-score-box">
+                    <div className="fb-score-val">{feedback.overall?.score !== 'insufficient_evidence' ? feedback.overall?.score : 'N/A'}</div>
+                    <div className="fb-score-label">Score</div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-foreground leading-relaxed">{feedback.summary}</p>
+              <CardContent className="fb-summary-content">
+                <p className="fb-summary-text">{feedback.summary}</p>
               </CardContent>
             </Card>
 
             {/* Category Scores */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">Categories</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <h2 className="fb-section-title">Categories</h2>
+              <div className="fb-categories-grid">
                 <ScoreCircle score={feedback.technicalAbility?.score} label="Technical" />
                 <ScoreCircle score={feedback.projectKnowledge?.score} label="Project" />
                 <ScoreCircle score={feedback.dsa?.score} label="DSA" />
@@ -153,36 +154,36 @@ export default function Feedback() {
             </div>
 
             {/* Detailed Lists */}
-            <div className="grid sm:grid-cols-2 gap-6">
-              <Card className="bg-emerald-500/5 border-emerald-500/20">
+            <div className="fb-lists-grid">
+              <Card className="fb-card-strengths">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-emerald-500 flex items-center gap-2">
-                    <span className="text-lg">✓</span> Strengths
+                  <CardTitle className="fb-list-title-strengths">
+                    <span className="fb-list-title-icon">✓</span> Strengths
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2 text-sm">
+                  <ul className="fb-list">
                     {feedback.strengths?.length > 0 ? (
-                      feedback.strengths.map((str, i) => <li key={i} className="pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-emerald-500">{str}</li>)
+                      feedback.strengths.map((str, i) => <li key={i} className="fb-list-item-strength">{str}</li>)
                     ) : (
-                      <li className="text-muted-foreground italic">No strengths identified based on this evidence.</li>
+                      <li className="fb-list-empty">No strengths identified based on this evidence.</li>
                     )}
                   </ul>
                 </CardContent>
               </Card>
 
-              <Card className="bg-rose-500/5 border-rose-500/20">
+              <Card className="fb-card-weaknesses">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-rose-500 flex items-center gap-2">
-                    <span className="text-lg">△</span> Areas to Improve
+                  <CardTitle className="fb-list-title-weaknesses">
+                    <span className="fb-list-title-icon">△</span> Areas to Improve
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2 text-sm">
+                  <ul className="fb-list">
                     {feedback.weaknesses?.length > 0 ? (
-                      feedback.weaknesses.map((weak, i) => <li key={i} className="pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-rose-500">{weak}</li>)
+                      feedback.weaknesses.map((weak, i) => <li key={i} className="fb-list-item-weakness">{weak}</li>)
                     ) : (
-                      <li className="text-muted-foreground italic">No weaknesses identified based on this evidence.</li>
+                      <li className="fb-list-empty">No weaknesses identified based on this evidence.</li>
                     )}
                   </ul>
                 </CardContent>
@@ -192,21 +193,21 @@ export default function Feedback() {
             {/* Suggestions */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-amber-500 flex items-center gap-2">
-                  <span className="text-lg">★</span> Actionable Suggestions
+                <CardTitle className="fb-card-suggestions-title">
+                  <span className="fb-list-title-icon">★</span> Actionable Suggestions
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3 text-sm">
+                <ul className="fb-suggestions-list">
                   {feedback.suggestions?.length > 0 ? (
                     feedback.suggestions.map((sug, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="shrink-0 text-amber-500/70">{i + 1}.</span>
-                        <span className="leading-relaxed">{sug}</span>
+                      <li key={i} className="fb-suggestion-item">
+                        <span className="fb-suggestion-num">{i + 1}.</span>
+                        <span className="fb-suggestion-text">{sug}</span>
                       </li>
                     ))
                   ) : (
-                    <li className="text-muted-foreground italic">No specific suggestions provided.</li>
+                    <li className="fb-list-empty">No specific suggestions provided.</li>
                   )}
                 </ul>
               </CardContent>

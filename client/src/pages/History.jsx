@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getInterviewHistory } from '../services/api'
 import { Button } from '../components/ui/button'
+import { ThemeToggle } from '../components/ThemeToggle'
+import '../styles/History.css'
 
 function DifficultyBadge({ difficulty }) {
   const colors = {
@@ -11,7 +13,7 @@ function DifficultyBadge({ difficulty }) {
     hard: 'text-rose-400 bg-rose-400/10 border-rose-400/20',
   }
   return (
-    <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium capitalize ${colors[difficulty] || 'text-muted-foreground border-border'}`}>
+    <span className={`hist-badge-common ${colors[difficulty] || 'text-muted-foreground border-border'}`}>
       {difficulty}
     </span>
   )
@@ -28,7 +30,7 @@ function StatusBadge({ status }) {
   const formatted = status.replace('_', ' ')
   
   return (
-    <span className={`text-sm capitalize font-medium ${colors[status] || 'text-muted-foreground'}`}>
+    <span className={`hist-status ${colors[status] || 'text-muted-foreground'}`}>
       {formatted}
     </span>
   )
@@ -60,10 +62,10 @@ export default function History() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading history…</p>
+      <div className="hist-loading-container">
+        <div className="hist-loading-content">
+          <div className="hist-loading-spinner" />
+          <p className="hist-loading-text">Loading history…</p>
         </div>
       </div>
     )
@@ -71,21 +73,22 @@ export default function History() {
 
   if (error) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <p className="text-foreground font-medium">Unable to load history</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
+      <div className="hist-error-container">
+        <div className="hist-error-content">
+          <p className="hist-error-title">Unable to load history</p>
+          <p className="hist-error-text">{error}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground pb-20">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <h1 className="text-xl font-semibold tracking-tight">Interview History</h1>
-          <div className="flex items-center gap-3">
+    <div className="hist-container">
+      <header className="hist-header">
+        <div className="hist-header-inner">
+          <h1 className="hist-title">Interview History</h1>
+          <div className="hist-header-actions">
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
               Dashboard
             </Button>
@@ -96,38 +99,38 @@ export default function History() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-6">
+      <main className="hist-main">
         {interviews.length === 0 ? (
-          <div className="text-center py-20 border border-dashed border-border rounded-lg bg-card">
-            <h2 className="text-lg font-medium text-foreground mb-2">No interviews yet.</h2>
-            <p className="text-sm text-muted-foreground mb-6">
+          <div className="hist-empty">
+            <h2 className="hist-empty-title">No interviews yet.</h2>
+            <p className="hist-empty-text">
               Start your first AI interview<br />
               to see your results here.
             </p>
             <Button onClick={() => navigate('/interview/create')}>Start Interview</Button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="hist-list">
             {interviews.map((iv) => {
               const score = iv.overallScore
               const displayScore = score === 'insufficient_evidence' || score == null ? 'N/A' : `${score}/10`
               const date = new Date(iv.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
               
               return (
-                <div key={iv.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-lg border border-border bg-card hover:bg-muted/5 transition-colors gap-4">
-                  <div className="space-y-1.5">
-                    <h3 className="text-base font-medium text-foreground truncate max-w-sm">{iv.role}</h3>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div key={iv.id} className="hist-card">
+                  <div className="hist-card-left">
+                    <h3 className="hist-card-role">{iv.role}</h3>
+                    <div className="hist-card-meta">
                       <DifficultyBadge difficulty={iv.difficulty} />
                       <span>·</span>
                       <StatusBadge status={iv.status} />
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-1/2">
-                    <div className="flex flex-col sm:items-end gap-1">
-                      <span className="text-sm font-medium text-foreground">Score: {displayScore}</span>
-                      <span className="text-xs text-muted-foreground">{date}</span>
+                  <div className="hist-card-right">
+                    <div className="hist-card-score-group">
+                      <span className="hist-card-score">Score: {displayScore}</span>
+                      <span className="hist-card-date">{date}</span>
                     </div>
                     
                     <Button variant="outline" size="sm" onClick={() => navigate(`/history/${iv.id}`)}>

@@ -7,6 +7,7 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import { Select } from '../components/ui/select'
+import { ThemeToggle } from '../components/ThemeToggle'
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card'
+import '../styles/CreateInterview.css'
 
 const DIFFICULTY_OPTIONS = [
   { value: 'easy', label: 'Easy' },
@@ -99,36 +101,39 @@ export default function CreateInterview() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="ci-container">
       {/* Top Navigation */}
-      <header className="border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center justify-between">
+      <header className="ci-header">
+        <div className="ci-header-inner">
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-base font-semibold tracking-tight text-foreground hover:text-primary transition-colors"
+            className="ci-logo"
           >
-            AI Interviewer
+            MOCKINT
           </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to Dashboard
-          </button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="ci-back-btn"
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-start justify-center px-4 py-10">
-        <div className="w-full max-w-xl">
-          <div className="mb-6">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-1">
+      <main className="ci-main">
+        <div className="ci-content">
+          <div className="ci-title-group">
+            <p className="ci-subtitle">
               New Interview
             </p>
-            <h1 className="text-2xl font-semibold text-foreground tracking-tight">
+            <h1 className="ci-title">
               Configure your interview
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="ci-description">
               Paste your resume and choose a role. Gemini will generate tailored questions.
             </p>
           </div>
@@ -140,18 +145,18 @@ export default function CreateInterview() {
             </CardHeader>
 
             <CardContent>
-              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+              <form onSubmit={handleSubmit} noValidate className="ci-form">
                 {error && (
                   <div
                     role="alert"
-                    className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    className="ci-error"
                   >
                     {error}
                   </div>
                 )}
 
                 {/* Resume */}
-                <div className="space-y-1.5">
+                <div className="ci-field-group">
                   <Label htmlFor="ci-resume">Resume</Label>
                   <Textarea
                     id="ci-resume"
@@ -162,13 +167,13 @@ export default function CreateInterview() {
                     disabled={isLoading}
                     className="min-h-[160px]"
                   />
-                  <p className="text-xs text-muted-foreground text-right">
+                  <p className="ci-field-hint-right">
                     {form.resume.length} / 5000
                   </p>
                 </div>
 
                 {/* Target Role */}
-                <div className="space-y-1.5">
+                <div className="ci-field-group">
                   <Label htmlFor="ci-role">Target Role</Label>
                   <Input
                     id="ci-role"
@@ -182,8 +187,8 @@ export default function CreateInterview() {
                 </div>
 
                 {/* Difficulty + Questions row */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                <div className="ci-row">
+                  <div className="ci-field-group">
                     <Label htmlFor="ci-difficulty">Difficulty</Label>
                     <Select
                       id="ci-difficulty"
@@ -200,7 +205,7 @@ export default function CreateInterview() {
                     </Select>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="ci-field-group">
                     <Label htmlFor="ci-question-count">Questions</Label>
                     <Input
                       id="ci-question-count"
@@ -213,12 +218,12 @@ export default function CreateInterview() {
                       onChange={handleChange}
                       disabled={isLoading}
                     />
-                    <p className="text-xs text-muted-foreground">1 – 20</p>
+                    <p className="ci-field-hint">1 – 20</p>
                   </div>
                 </div>
 
                 {/* Duration */}
-                <div className="space-y-1.5">
+                <div className="ci-field-group">
                   <Label htmlFor="ci-duration">Duration (minutes)</Label>
                   <Input
                     id="ci-duration"
@@ -231,7 +236,7 @@ export default function CreateInterview() {
                     onChange={handleChange}
                     disabled={isLoading}
                   />
-                  <p className="text-xs text-muted-foreground">1 – 120 minutes</p>
+                  <p className="ci-field-hint">1 – 120 minutes</p>
                 </div>
 
                 <Button
@@ -241,8 +246,8 @@ export default function CreateInterview() {
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                    <span className="ci-submit-loading">
+                      <span className="ci-loading-spinner" />
                       Generating first question…
                     </span>
                   ) : (
@@ -251,7 +256,7 @@ export default function CreateInterview() {
                 </Button>
 
                 {isLoading && (
-                  <p className="text-center text-xs text-muted-foreground">
+                  <p className="ci-loading-text">
                     Gemini is generating your first question. This may take a few seconds.
                   </p>
                 )}

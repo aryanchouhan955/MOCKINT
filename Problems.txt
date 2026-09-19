@@ -1,0 +1,8 @@
+1. User's token is not safe for XSS and CSRF attacks.
+Problem: Token is stored in local storage which can be retreive by JavaScript.
+Solution: Store token in HttpOnly cookies and use CSRF tokens for form submissions.
+
+2. No rate limiting on login and create-interview routes.
+Solution: Implement rate limiting on the server side.
+
+

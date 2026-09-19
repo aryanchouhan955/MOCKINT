@@ -1,0 +1,173 @@
+/* ── History Layout ──────────────────────────────────────────────────────── */
+.hist-container {
+  @apply min-h-screen pb-20;
+  background: hsl(var(--background));
+  position: relative;
+}
+
+/* Ambient glow */
+.hist-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 65% 45% at 5% 0%, hsl(248 90% 66% / 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 95% 100%, hsl(280 80% 68% / 0.06) 0%, transparent 50%);
+}
+
+.hist-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.hist-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid var(--surface-glass-border);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.hist-header-inner {
+  @apply mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between;
+}
+
+.hist-title {
+  @apply text-xl font-bold tracking-tight;
+  letter-spacing: -0.02em;
+}
+
+.hist-header-actions {
+  @apply flex items-center gap-3;
+}
+
+/* ── Main Content ────────────────────────────────────────────────────────── */
+.hist-main {
+  @apply mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-4;
+  animation: fadeInUp 0.5s ease both;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────── */
+.hist-empty {
+  @apply text-center py-24 rounded-2xl;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-glass-border);
+  border-style: dashed;
+}
+
+.hist-empty-title {
+  @apply text-lg font-semibold text-foreground mb-2;
+}
+
+.hist-empty-text {
+  @apply text-sm text-muted-foreground mb-8;
+  line-height: 1.7;
+}
+
+/* ── History List ────────────────────────────────────────────────────────── */
+.hist-list {
+  @apply space-y-3;
+}
+
+/* Individual card */
+.hist-card {
+  @apply flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-xl gap-4;
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-glass-border);
+  border-left: 3px solid hsl(248 90% 66% / 0.4);
+  box-shadow: 0 2px 8px hsl(0 0% 0% / 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.hist-card:hover {
+  transform: translateY(-2px);
+  border-left-color: hsl(248 90% 66% / 0.8);
+  box-shadow:
+    0 6px 20px hsl(0 0% 0% / 0.1),
+    0 0 12px hsl(248 90% 66% / 0.12);
+}
+
+.hist-card-left {
+  @apply space-y-2;
+}
+
+.hist-card-role {
+  @apply text-base font-semibold text-foreground truncate max-w-sm;
+}
+
+.hist-card-meta {
+  @apply flex items-center gap-2 text-sm text-muted-foreground;
+}
+
+.hist-card-right {
+  @apply flex items-center justify-between sm:justify-end gap-6 sm:w-auto shrink-0;
+}
+
+.hist-card-score-group {
+  @apply flex flex-col sm:items-end gap-0.5;
+}
+
+.hist-card-score {
+  @apply text-sm font-semibold text-foreground;
+}
+
+.hist-card-date {
+  @apply text-xs text-muted-foreground;
+}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.hist-badge-common {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize;
+  border: 1px solid;
+}
+
+.hist-status {
+  @apply text-sm capitalize font-medium;
+}
+
+/* ── Loading & Error States ─────────────────────────────────────────────── */
+.hist-loading-container {
+  @apply min-h-screen flex items-center justify-center;
+  background: hsl(var(--background));
+}
+
+.hist-loading-content {
+  @apply flex flex-col items-center gap-4;
+}
+
+.hist-loading-spinner {
+  @apply h-8 w-8 animate-spin rounded-full;
+  border: 2px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.3);
+}
+
+.hist-loading-text {
+  @apply text-sm text-muted-foreground;
+}
+
+.hist-error-container {
+  @apply min-h-screen flex items-center justify-center px-4;
+  background: hsl(var(--background));
+}
+
+.hist-error-content {
+  @apply text-center space-y-4 max-w-sm;
+}
+
+.hist-error-title {
+  @apply text-foreground font-semibold;
+}
+
+.hist-error-text {
+  @apply text-sm text-muted-foreground;
+}

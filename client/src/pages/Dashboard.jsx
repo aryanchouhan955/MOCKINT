@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { getInterviewHistory } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
+import { ThemeToggle } from '../components/ThemeToggle'
+import '../styles/Dashboard.css'
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth()
@@ -60,15 +62,15 @@ export default function Dashboard() {
   const displayName = user?.name || user?.email || 'there'
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="dashboard-container">
       {/* Top Navigation */}
-      <header className="border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 h-14 flex items-center justify-between">
-          <span className="text-base font-semibold tracking-tight text-foreground">
-            AI Interviewer
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <span className="dashboard-logo">
+            MOCKINT
           </span>
 
-          <nav className="flex items-center gap-1">
+          <nav className="dashboard-nav">
             <Button
               id="nav-dashboard"
               variant="ghost"
@@ -99,7 +101,8 @@ export default function Dashboard() {
               Profile
             </Button>
 
-            <div className="ml-2 h-4 w-px bg-border" />
+            <div className="dashboard-nav-divider" />
+            <ThemeToggle />
 
             <Button
               id="nav-logout"
@@ -115,22 +118,22 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-16">
-        <div className="w-full max-w-lg text-center space-y-6">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">
+      <main className="dashboard-main">
+        <div className="dashboard-content">
+          <div className="dashboard-title-group">
+            <p className="dashboard-subtitle">
               Dashboard
             </p>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
+            <h1 className="dashboard-title">
               Welcome, {displayName}
             </h1>
           </div>
 
-          <p className="text-muted-foreground text-base max-w-sm mx-auto leading-relaxed">
+          <p className="dashboard-description">
             Practice technical interviews with an adaptive AI interviewer.
           </p>
 
-          <div className="pt-2">
+          <div className="dashboard-action">
             <Button
               id="start-interview"
               size="lg"
@@ -142,16 +145,16 @@ export default function Dashboard() {
           </div>
 
           {/* Stats placeholder cards */}
-          <div className="grid grid-cols-2 gap-3 pt-4 sm:grid-cols-3">
+          <div className="dashboard-stats-grid">
             {[
               { label: 'Interviews', value: stats.interviews },
               { label: 'Avg. Score', value: stats.avgScore },
               { label: 'Practice Hours', value: stats.practiceHours },
             ].map((stat) => (
-              <Card key={stat.label} className="text-center py-4 px-3">
-                <CardContent className="p-0">
-                  <p className="text-xl font-semibold text-foreground">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+              <Card key={stat.label} className="dashboard-stat-card">
+                <CardContent className="dashboard-stat-content">
+                  <p className="dashboard-stat-value">{stat.value}</p>
+                  <p className="dashboard-stat-label">{stat.label}</p>
                 </CardContent>
               </Card>
             ))}

@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card'
+import '../styles/Login.css'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -71,32 +72,32 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+    <div className="auth-container">
       {/* Brand */}
-      <div className="mb-8 text-center">
-        <span className="text-2xl font-semibold tracking-tight text-foreground">
-          AI Interviewer
+      <div className="auth-brand">
+        <span className="auth-logo">
+          MOCKINT
         </span>
       </div>
 
-      <Card className="w-full max-w-sm">
+      <Card className="auth-card">
         <CardHeader className="pb-4">
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Sign in to your account to continue.</CardDescription>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="auth-form">
             {error && (
               <div
                 role="alert"
-                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                className="auth-error"
               >
                 {error}
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="auth-field-group">
               <Label htmlFor="login-email">Email</Label>
               <Input
                 id="login-email"
@@ -110,7 +111,7 @@ export default function Login() {
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="auth-field-group">
               <Label htmlFor="login-password">Password</Label>
               <Input
                 id="login-password"
@@ -131,8 +132,8 @@ export default function Login() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                <span className="auth-submit-loading">
+                  <span className="auth-loading-spinner" />
                   Signing in…
                 </span>
               ) : (
@@ -141,11 +142,11 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-muted-foreground">
+          <p className="auth-footer">
             Don&apos;t have an account?{' '}
             <Link
               to="/signup"
-              className="text-primary hover:underline underline-offset-4"
+              className="auth-link"
             >
               Sign up
             </Link>

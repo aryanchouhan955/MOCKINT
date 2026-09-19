@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { getInterview } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
+import { ThemeToggle } from '../components/ThemeToggle'
+import '../styles/InterviewDetails.css'
 
 function ScoreCircle({ score, label }) {
   const isNa = score === 'insufficient_evidence' || score === null || score === undefined
@@ -17,11 +19,11 @@ function ScoreCircle({ score, label }) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 rounded-lg border border-border bg-card shadow-sm">
-      <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 mb-2 ${color}`}>
-        <span className="text-lg font-bold">{displayScore}</span>
+    <div className="id-score-circle">
+      <div className={`id-score-circle-inner ${color}`}>
+        <span className="id-score-circle-val">{displayScore}</span>
       </div>
-      <span className="text-xs text-center text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
+      <span className="id-score-circle-label">{label}</span>
     </div>
   )
 }
@@ -33,7 +35,7 @@ function DifficultyBadge({ difficulty }) {
     hard: 'text-rose-400 bg-rose-400/10 border-rose-400/20',
   }
   return (
-    <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium capitalize ${colors[difficulty] || 'text-muted-foreground border-border'}`}>
+    <span className={`id-badge-common ${colors[difficulty] || 'text-muted-foreground border-border'}`}>
       {difficulty}
     </span>
   )
@@ -63,10 +65,10 @@ export default function InterviewDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading details…</p>
+      <div className="id-loading-container">
+        <div className="id-loading-content">
+          <div className="id-loading-spinner" />
+          <p className="id-loading-text">Loading details…</p>
         </div>
       </div>
     )
@@ -74,10 +76,10 @@ export default function InterviewDetails() {
 
   if (error || !interview) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-background px-4">
-        <div className="text-center space-y-4 max-w-sm">
-          <p className="text-foreground font-medium">Unable to load details</p>
-          <p className="text-sm text-muted-foreground">{error || 'Interview not found'}</p>
+      <div className="id-error-container">
+        <div className="id-error-content">
+          <p className="id-error-title">Unable to load details</p>
+          <p className="id-error-text">{error || 'Interview not found'}</p>
           <Button onClick={() => navigate('/history')} variant="outline" size="sm">
             Back to History
           </Button>
@@ -90,15 +92,16 @@ export default function InterviewDetails() {
   const date = new Date(createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground pb-20">
+    <div className="id-container">
       {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between">
+      <header className="id-header">
+        <div className="id-header-inner">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight truncate max-w-[200px] sm:max-w-md">{role}</h1>
-            <p className="text-sm text-muted-foreground">{date}</p>
+            <h1 className="id-title">{role}</h1>
+            <p className="id-subtitle">{date}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="id-header-actions">
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={() => navigate('/history')}>
               Back
             </Button>
@@ -106,90 +109,90 @@ export default function InterviewDetails() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 sm:px-6 mt-8 space-y-8">
+      <main className="id-main">
         
         {/* Info Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-lg border border-border bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Status</div>
-            <div className="font-medium capitalize">{status.replace('_', ' ')}</div>
+        <div className="id-info-grid">
+          <div className="id-info-card">
+            <div className="id-info-label">Status</div>
+            <div className="id-info-val-capitalize">{status.replace('_', ' ')}</div>
           </div>
-          <div className="p-4 rounded-lg border border-border bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Difficulty</div>
-            <div className="mt-0.5"><DifficultyBadge difficulty={difficulty} /></div>
+          <div className="id-info-card">
+            <div className="id-info-label">Difficulty</div>
+            <div className="id-info-val-badge"><DifficultyBadge difficulty={difficulty} /></div>
           </div>
-          <div className="p-4 rounded-lg border border-border bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Duration</div>
-            <div className="font-medium">{duration} min</div>
+          <div className="id-info-card">
+            <div className="id-info-label">Duration</div>
+            <div className="id-info-val">{duration} min</div>
           </div>
-          <div className="p-4 rounded-lg border border-border bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Questions</div>
-            <div className="font-medium">{questionsAsked} / {questionCount}</div>
+          <div className="id-info-card">
+            <div className="id-info-label">Questions</div>
+            <div className="id-info-val">{questionsAsked} / {questionCount}</div>
           </div>
         </div>
 
         {/* Conversation */}
         <section>
-          <h2 className="text-lg font-semibold mb-4">Conversation History</h2>
-          <div className="space-y-6">
+          <h2 className="id-section-title">Conversation History</h2>
+          <div className="id-conv-list">
             {conversation?.length > 0 ? (
               conversation.map((msg, i) => (
-                <div key={i} className={`p-4 rounded-lg border ${msg.role === 'interviewer' ? 'border-primary/20 bg-primary/5' : 'border-border bg-card'}`}>
-                  <div className="text-xs font-semibold uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span className={msg.role === 'interviewer' ? 'text-primary' : 'text-muted-foreground'}>
+                <div key={i} className={msg.role === 'interviewer' ? 'id-msg-interviewer' : 'id-msg-user'}>
+                  <div className="id-msg-header">
+                    <span className={msg.role === 'interviewer' ? 'id-msg-role-interviewer' : 'id-msg-role-user'}>
                       {msg.role === 'interviewer' ? 'Interviewer' : 'You'}
                     </span>
                     {msg.role === 'interviewer' && msg.topic && (
-                      <span className="text-muted-foreground/60">{msg.topic}</span>
+                      <span className="id-msg-topic">{msg.topic}</span>
                     )}
                   </div>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                  <p className="id-msg-text">{msg.text}</p>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground italic">No conversation recorded.</p>
+              <p className="id-conv-empty">No conversation recorded.</p>
             )}
           </div>
         </section>
 
         {/* Feedback Section */}
         {feedback && (
-          <section className="pt-8 border-t border-border mt-12 space-y-8">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold tracking-tight">Interview Feedback</h2>
-              <p className="text-sm text-muted-foreground mt-1">Generated by AI after the interview ended.</p>
+          <section className="id-feedback-section">
+            <div className="id-feedback-header-group">
+              <h2 className="id-feedback-title">Interview Feedback</h2>
+              <p className="id-feedback-subtitle">Generated by AI after the interview ended.</p>
             </div>
 
             {status === 'cancelled' && (
-              <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500 flex flex-col gap-1">
-                <h3 className="font-semibold">Interview Cancelled</h3>
-                <p className="text-sm opacity-90">This interview was cancelled early. The feedback below is based on limited evidence.</p>
+              <div className="id-cancelled-banner">
+                <h3 className="id-cancelled-title">Interview Cancelled</h3>
+                <p className="id-cancelled-text">This interview was cancelled early. The feedback below is based on limited evidence.</p>
               </div>
             )}
 
             {/* Overall & Summary */}
             <Card>
-              <CardHeader className="border-b border-border bg-muted/10">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardHeader className="id-overall-header">
+                <div className="id-overall-layout">
                   <div>
-                    <CardTitle className="text-2xl">Overall Assessment</CardTitle>
-                    <CardDescription className="mt-1.5 text-base">{feedback.overall?.comment}</CardDescription>
+                    <CardTitle className="id-overall-title">Overall Assessment</CardTitle>
+                    <CardDescription className="id-overall-desc">{feedback.overall?.comment}</CardDescription>
                   </div>
-                  <div className="shrink-0 text-center bg-card border border-border p-3 rounded-lg shadow-sm">
-                    <div className="text-3xl font-bold">{feedback.overall?.score !== 'insufficient_evidence' ? feedback.overall?.score : 'N/A'}</div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Score</div>
+                  <div className="id-score-box">
+                    <div className="id-score-val">{feedback.overall?.score !== 'insufficient_evidence' ? feedback.overall?.score : 'N/A'}</div>
+                    <div className="id-score-label">Score</div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-foreground leading-relaxed">{feedback.summary}</p>
+              <CardContent className="id-summary-content">
+                <p className="id-summary-text">{feedback.summary}</p>
               </CardContent>
             </Card>
 
             {/* Category Scores */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Categories</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <h3 className="id-categories-title">Categories</h3>
+              <div className="id-categories-grid">
                 <ScoreCircle score={feedback.technicalAbility?.score} label="Technical" />
                 <ScoreCircle score={feedback.projectKnowledge?.score} label="Project" />
                 <ScoreCircle score={feedback.dsa?.score} label="DSA" />
@@ -200,36 +203,36 @@ export default function InterviewDetails() {
             </div>
 
             {/* Detailed Lists */}
-            <div className="grid sm:grid-cols-2 gap-6">
-              <Card className="bg-emerald-500/5 border-emerald-500/20">
+            <div className="id-lists-grid">
+              <Card className="id-card-strengths">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-emerald-500 flex items-center gap-2">
-                    <span className="text-lg">✓</span> Strengths
+                  <CardTitle className="id-list-title-strengths">
+                    <span className="id-list-title-icon">✓</span> Strengths
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2 text-sm">
+                  <ul className="id-list">
                     {feedback.strengths?.length > 0 ? (
-                      feedback.strengths.map((str, i) => <li key={i} className="pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-emerald-500">{str}</li>)
+                      feedback.strengths.map((str, i) => <li key={i} className="id-list-item-strength">{str}</li>)
                     ) : (
-                      <li className="text-muted-foreground italic">No strengths identified based on this evidence.</li>
+                      <li className="id-list-empty">No strengths identified based on this evidence.</li>
                     )}
                   </ul>
                 </CardContent>
               </Card>
 
-              <Card className="bg-rose-500/5 border-rose-500/20">
+              <Card className="id-card-weaknesses">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-rose-500 flex items-center gap-2">
-                    <span className="text-lg">△</span> Areas to Improve
+                  <CardTitle className="id-list-title-weaknesses">
+                    <span className="id-list-title-icon">△</span> Areas to Improve
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2 text-sm">
+                  <ul className="id-list">
                     {feedback.weaknesses?.length > 0 ? (
-                      feedback.weaknesses.map((weak, i) => <li key={i} className="pl-4 relative before:content-['•'] before:absolute before:left-0 before:text-rose-500">{weak}</li>)
+                      feedback.weaknesses.map((weak, i) => <li key={i} className="id-list-item-weakness">{weak}</li>)
                     ) : (
-                      <li className="text-muted-foreground italic">No weaknesses identified based on this evidence.</li>
+                      <li className="id-list-empty">No weaknesses identified based on this evidence.</li>
                     )}
                   </ul>
                 </CardContent>
@@ -239,21 +242,21 @@ export default function InterviewDetails() {
             {/* Suggestions */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-amber-500 flex items-center gap-2">
-                  <span className="text-lg">★</span> Actionable Suggestions
+                <CardTitle className="id-card-suggestions-title">
+                  <span className="id-list-title-icon">★</span> Actionable Suggestions
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3 text-sm">
+                <ul className="id-suggestions-list">
                   {feedback.suggestions?.length > 0 ? (
                     feedback.suggestions.map((sug, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="shrink-0 text-amber-500/70">{i + 1}.</span>
-                        <span className="leading-relaxed">{sug}</span>
+                      <li key={i} className="id-suggestion-item">
+                        <span className="id-suggestion-num">{i + 1}.</span>
+                        <span className="id-suggestion-text">{sug}</span>
                       </li>
                     ))
                   ) : (
-                    <li className="text-muted-foreground italic">No specific suggestions provided.</li>
+                    <li className="id-list-empty">No specific suggestions provided.</li>
                   )}
                 </ul>
               </CardContent>
