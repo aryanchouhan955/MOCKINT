@@ -41,6 +41,7 @@ const getMe = async (req, res) => {
         email: user.email,
         hasCustomKey: !!user.geminiApiKey,
         maskedKey,
+        geminiModel: user.geminiModel || null,
       },
     });
   } catch (err) {
@@ -119,4 +120,52 @@ const deleteApiKey = async (req, res) => {
   }
 };
 
-module.exports = { getMe, saveApiKey, deleteApiKey };
+// ─── POST /api/users/geminimodel ───────────────────────────────────────────────
+// Saves the user's preferred Gemini model. Pass null or "default" to reset
+// back to the system default (gemini-2.5-flash).
+const ALLOWED_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+];
+
+const saveGeminiModel = async (req, res) => {
+  try {
+    const { model } = req.body;
+
+    // null / "default" / empty → reset to system default
+    if (!model || model === "default") {
+      await User.findByIdAndUpdate(req.user.userId, { geminiModel: null });
+      return res.status(200).json({
+        success: true,
+        message: "Gemini model reset to system default.",
+        geminiModel: null,
+      });
+    }
+
+    if (!ALLOWED_MODELS.includes(model)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid model. Allowed values: ${ALLOWED_MODELS.join(", ")}.`,
+      });
+    }
+
+    await User.findByIdAndUpdate(req.user.userId, { geminiModel: model });
+
+    return res.status(200).json({
+      success: true,
+      message: `Gemini model set to ${model}.`,
+      geminiModel: model,
+    });
+  } catch (err) {
+    console.error("Save Gemini model error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save model preference. Please try again.",
+    });
+  }
+};
+
+module.exports = { getMe, saveApiKey, deleteApiKey, saveGeminiModel };

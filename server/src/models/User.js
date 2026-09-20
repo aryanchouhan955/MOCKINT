@@ -35,6 +35,11 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // User's preferred Gemini model — null means use the system default
+    geminiModel: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically

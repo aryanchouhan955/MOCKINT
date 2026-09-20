@@ -292,3 +292,104 @@
 .prof-apikey-save-btn {
   @apply self-start;
 }
+
+/* ── Gemini Model Selector ────────────────────────────────────────────────── */
+.prof-model-badge {
+  @apply text-xs font-semibold px-2.5 py-1 rounded-full border;
+  background: hsl(248 90% 66% / 0.1);
+  border-color: hsl(248 90% 66% / 0.3);
+  color: hsl(248 70% 60%);
+}
+
+.prof-model-content {
+  @apply space-y-5;
+}
+
+.prof-model-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 gap-3;
+}
+
+.prof-model-option {
+  @apply flex items-start gap-3 p-4 rounded-xl border cursor-pointer;
+  border-color: hsl(var(--border));
+  background: hsl(var(--background));
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prof-model-option:hover {
+  border-color: hsl(248 90% 66% / 0.4);
+  background: hsl(248 90% 66% / 0.04);
+}
+
+.prof-model-option--selected {
+  border-color: hsl(248 90% 66% / 0.7) !important;
+  background: hsl(248 90% 66% / 0.07) !important;
+  box-shadow: 0 0 0 1px hsl(248 90% 66% / 0.2), 0 2px 12px hsl(248 90% 66% / 0.08);
+}
+
+.prof-model-radio {
+  @apply mt-0.5 flex-shrink-0 accent-violet-500;
+  width: 16px;
+  height: 16px;
+}
+
+.prof-model-info {
+  @apply flex flex-col gap-1 min-w-0;
+}
+
+.prof-model-name-row {
+  @apply flex items-center gap-2 flex-wrap;
+}
+
+.prof-model-name {
+  @apply text-sm font-semibold;
+  color: hsl(var(--foreground));
+}
+
+.prof-model-pill {
+  @apply text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide;
+  line-height: 1.4;
+}
+
+.prof-model-pill--fast {
+  background: hsl(142 70% 45% / 0.12);
+  color: hsl(142 60% 40%);
+  border: 1px solid hsl(142 70% 45% / 0.3);
+}
+.dark .prof-model-pill--fast {
+  color: hsl(142 70% 60%);
+}
+
+.prof-model-pill--best {
+  background: hsl(248 90% 66% / 0.12);
+  color: hsl(248 65% 55%);
+  border: 1px solid hsl(248 90% 66% / 0.35);
+}
+.dark .prof-model-pill--best {
+  color: hsl(248 80% 72%);
+}
+
+.prof-model-pill--default {
+  background: hsl(35 90% 55% / 0.1);
+  color: hsl(35 70% 40%);
+  border: 1px solid hsl(35 90% 55% / 0.3);
+}
+.dark .prof-model-pill--default {
+  color: hsl(35 80% 65%);
+}
+
+.prof-model-saved-dot {
+  @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
+  background: hsl(248 90% 66%);
+  box-shadow: 0 0 6px hsl(248 90% 66% / 0.5);
+}
+
+.prof-model-desc {
+  @apply text-xs text-muted-foreground leading-relaxed;
+}
+
+.prof-model-id {
+  @apply text-[10px] font-mono mt-0.5;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.7;
+}

@@ -207,3 +207,17 @@ export async function deleteApiKey(token) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+/**
+ * POST /users/geminimodel — saves the user's preferred Gemini model.
+ * Pass model: "default" to reset to the system default.
+ * @param {string} model    The Gemini model ID (e.g. "gemini-2.5-pro")
+ * @param {string} token    JWT auth token
+ */
+export async function saveGeminiModel(model, token) {
+  return apiFetch('/users/geminimodel', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ model }),
+  })
+}

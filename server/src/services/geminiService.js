@@ -4,7 +4,8 @@ const { GoogleGenAI } = require("@google/genai");
 // Each function creates its own instance so it can accept a per-user API key.
 // Falls back to the system GEMINI_API_KEY env variable when no custom key is provided.
 
-const gemini_model = "gemini-2.5-flash";
+// System default model — used when the user has not selected a custom model
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 
 // ─── generateFirstQuestion ─────────────────────────────────────────────────────
 // Sends candidate context to Gemini and returns a structured first question.
@@ -19,8 +20,9 @@ const gemini_model = "gemini-2.5-flash";
 // Throws:
 //   Error — if Gemini fails or returns malformed data
 // ──────────────────────────────────────────────────────────────────────────────
-async function generateFirstQuestion({ resume, role, difficulty, questionCount, duration, apiKey }) {
+async function generateFirstQuestion({ resume, role, difficulty, questionCount, duration, apiKey, model }) {
   const ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY });
+  const resolvedModel = model || DEFAULT_GEMINI_MODEL;
 
   // ── System instruction: how the AI should behave ──────────────────────────
   const systemInstruction = `You are a professional technical interviewer conducting a mock interview.
@@ -60,7 +62,7 @@ Generate the first interview question now.`;
 
   // ── Call Gemini ───────────────────────────────────────────────────────────
   const response = await ai.models.generateContent({
-    model: gemini_model,
+    model: resolvedModel,
     contents: userPrompt,
     config: {
       systemInstruction,
@@ -105,8 +107,9 @@ Generate the first interview question now.`;
 // Analyzes the conversation history and candidate's latest answer, then
 // decides whether to follow up or move to a new topic, returning the next question.
 // ──────────────────────────────────────────────────────────────────────────────
-async function generateNextQuestion({ resume, role, difficulty, questionCount, questionsAsked, conversation, apiKey }) {
+async function generateNextQuestion({ resume, role, difficulty, questionCount, questionsAsked, conversation, apiKey, model }) {
   const ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY });
+  const resolvedModel = model || DEFAULT_GEMINI_MODEL;
   const systemInstruction = `You are a professional technical interviewer conducting a realistic short interview.
 
 Your job is to determine the single best next question for the candidate based on everything that has happened in the interview so far.
@@ -171,7 +174,7 @@ Do NOT include any text outside the JSON. Do NOT wrap it in markdown code fences
   const userPrompt = `CONVERSATION SO FAR:\n${conversationText}\n\nGenerate the next interview question now.`;
 
   const response = await ai.models.generateContent({
-    model: gemini_model,
+    model: resolvedModel,
     contents: userPrompt,
     config: {
       systemInstruction,
@@ -214,8 +217,9 @@ Do NOT include any text outside the JSON. Do NOT wrap it in markdown code fences
 // ─── generateInterviewFeedback ────────────────────────────────────────────────
 // Evaluates the completed or cancelled interview and returns structured feedback.
 // ──────────────────────────────────────────────────────────────────────────────
-async function generateInterviewFeedback({ resume, role, difficulty, questionCount, status, conversation, apiKey }) {
+async function generateInterviewFeedback({ resume, role, difficulty, questionCount, status, conversation, apiKey, model }) {
   const ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY });
+  const resolvedModel = model || DEFAULT_GEMINI_MODEL;
   const systemInstruction = `You are an expert technical interview evaluator.
 
 Evaluate a candidate's mock interview based ONLY on evidence present in the provided resume and conversation.
@@ -270,7 +274,7 @@ Do NOT include any text outside the JSON. Do NOT wrap it in markdown code fences
   const userPrompt = `Candidate Resume:\n${resume}\n\nTarget Role: ${role}\nDifficulty: ${difficulty}\nQuestion Count: ${questionCount}\nInterview Status: ${status}\n\nConversation:\n${conversationText}`;
 
   const response = await ai.models.generateContent({
-    model: gemini_model,
+    model: resolvedModel,
     contents: userPrompt,
     config: {
       systemInstruction,

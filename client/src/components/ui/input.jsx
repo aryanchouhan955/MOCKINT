@@ -12,6 +12,7 @@ const Input = React.forwardRef(({ className, type, ...props }, ref) => {
       style={{
         background: 'hsl(var(--input) / 0.6)',
         borderColor: 'var(--surface-glass-border)',
+        color: 'hsl(var(--foreground))',
       }}
       onFocus={e => {
         e.target.style.borderColor = 'hsl(var(--ring) / 0.5)'

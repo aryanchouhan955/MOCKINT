@@ -1,11 +1,57 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getInterviewHistory, getCurrentUser, saveApiKey, deleteApiKey } from '../services/api'
+import { getInterviewHistory, getCurrentUser, saveApiKey, deleteApiKey, saveGeminiModel } from '../services/api'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { ThemeToggle } from '../components/ThemeToggle'
 import '../styles/Profile.css'
+
+// ── Gemini models offered to users ──────────────────────────────────────────
+const GEMINI_MODELS = [
+  {
+    id: 'default',
+    label: 'System Default',
+    name: 'gemini-2.5-flash',
+    desc: 'Fast & free — used when no preference is set',
+    badge: 'Default',
+  },
+  {
+    id: 'gemini-2.5-flash',
+    label: 'Gemini 2.5 Flash',
+    name: 'gemini-2.5-flash',
+    desc: 'Fast responses, great for real-time interviews',
+    badge: 'Fast',
+  },
+  {
+    id: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    name: 'gemini-2.5-pro',
+    desc: 'Most capable model — deeper analysis & feedback',
+    badge: 'Best',
+  },
+  {
+    id: 'gemini-2.0-flash',
+    label: 'Gemini 2.0 Flash',
+    name: 'gemini-2.0-flash',
+    desc: 'Previous generation flash — stable & reliable',
+    badge: null,
+  },
+  {
+    id: 'gemini-1.5-flash',
+    label: 'Gemini 1.5 Flash',
+    name: 'gemini-1.5-flash',
+    desc: 'Lightweight model, lower quota consumption',
+    badge: null,
+  },
+  {
+    id: 'gemini-1.5-pro',
+    label: 'Gemini 1.5 Pro',
+    name: 'gemini-1.5-pro',
+    desc: 'Previous Pro generation — strong reasoning',
+    badge: null,
+  },
+]
 
 export default function Profile() {
   const { user, token, logout } = useAuth()
@@ -22,9 +68,15 @@ export default function Profile() {
   const [maskedKey, setMaskedKey]       = useState(null)
   const [apiKeyInput, setApiKeyInput]   = useState('')
   const [showKey, setShowKey]           = useState(false)
-  const [keyStatus, setKeyStatus]       = useState(null)   // { type: 'success'|'error', msg: string }
+  const [keyStatus, setKeyStatus]       = useState(null)
   const [keySaving, setKeySaving]       = useState(false)
   const [keyDeleting, setKeyDeleting]   = useState(false)
+
+  // ── Gemini Model state ─────────────────────────────────────────────────────
+  const [selectedModel, setSelectedModel]   = useState('default')
+  const [savedModel, setSavedModel]         = useState('default')
+  const [modelStatus, setModelStatus]       = useState(null)
+  const [modelSaving, setModelSaving]       = useState(false)
 
   useEffect(() => {
     async function loadStats() {
@@ -39,36 +91,33 @@ export default function Profile() {
       let totalMinutes = 0
 
       history.forEach(iv => {
-        if (iv.duration) {
-          totalMinutes += iv.duration
-        }
-
+        if (iv.duration) totalMinutes += iv.duration
         if (iv.overallScore && iv.overallScore !== 'insufficient_evidence') {
           totalScore += Number(iv.overallScore)
           scoredCount++
         }
       })
 
-      const avgScore = scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : 'N/A'
-      const practiceHours = totalMinutes > 0 ? (totalMinutes / 60).toFixed(1) : 0
-
       setStats({
         interviews: totalInterviews,
-        avgScore,
-        practiceHours
+        avgScore: scoredCount > 0 ? (totalScore / scoredCount).toFixed(1) : 'N/A',
+        practiceHours: totalMinutes > 0 ? (totalMinutes / 60).toFixed(1) : 0,
       })
     }
 
-    async function loadApiKeyStatus() {
+    async function loadUserPrefs() {
       const { data } = await getCurrentUser(token)
       if (data?.user) {
         setHasCustomKey(!!data.user.hasCustomKey)
         setMaskedKey(data.user.maskedKey || null)
+        const m = data.user.geminiModel || 'default'
+        setSelectedModel(m)
+        setSavedModel(m)
       }
     }
 
     loadStats()
-    loadApiKeyStatus()
+    loadUserPrefs()
   }, [token])
 
   function handleLogout() {
@@ -91,7 +140,7 @@ export default function Profile() {
       setHasCustomKey(true)
       setMaskedKey(data.maskedKey)
       setApiKeyInput('')
-      setKeyStatus({ type: 'success', msg: 'API key saved successfully! Your interviews will now use your personal key.' })
+      setKeyStatus({ type: 'success', msg: 'API key saved! Your interviews will now use your personal key.' })
     }
   }
 
@@ -110,7 +159,23 @@ export default function Profile() {
     }
   }
 
+  async function handleSaveModel() {
+    setModelSaving(true)
+    setModelStatus(null)
+    const modelToSave = selectedModel === 'default' ? 'default' : selectedModel
+    const { data, error } = await saveGeminiModel(modelToSave, token)
+    setModelSaving(false)
+    if (error) {
+      setModelStatus({ type: 'error', msg: error })
+    } else {
+      setSavedModel(selectedModel)
+      const label = GEMINI_MODELS.find(m => m.id === selectedModel)?.label || selectedModel
+      setModelStatus({ type: 'success', msg: `Model set to ${label}.` })
+    }
+  }
+
   const displayName = user?.name || user?.email || 'User'
+  const modelChanged = selectedModel !== savedModel
 
   return (
     <div className="prof-container">
@@ -144,7 +209,6 @@ export default function Profile() {
               <p className="prof-info-label">Email</p>
               <p className="prof-info-val">{user?.email}</p>
             </div>
-            
             <div className="prof-actions">
               <Button variant="destructive" size="sm" onClick={handleLogout}>
                 Logout
@@ -164,20 +228,13 @@ export default function Profile() {
             </div>
             <p className="prof-apikey-desc">
               Provide your own{' '}
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="prof-apikey-link"
-              >
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="prof-apikey-link">
                 Google AI Studio API key
               </a>{' '}
               to avoid rate limits. Your key is encrypted before being stored and is never shared.
             </p>
           </CardHeader>
           <CardContent className="prof-apikey-content">
-
-            {/* Current key status */}
             {hasCustomKey && maskedKey && (
               <div className="prof-apikey-current">
                 <span className="prof-info-label">Current key</span>
@@ -197,7 +254,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* Input for new key */}
             <div className="prof-apikey-field">
               <label htmlFor="gemini-api-key" className="prof-info-label">
                 {hasCustomKey ? 'Replace with a new key' : 'Enter your API key'}
@@ -227,22 +283,19 @@ export default function Profile() {
                 </button>
               </div>
               <p className="prof-apikey-hint">
-                Get your free API key from{' '}
+                Keys start with <code className="prof-apikey-code">AIza</code> and are available free from{' '}
                 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="prof-apikey-link">
                   Google AI Studio
-                </a>
-                . Keys start with <code className="prof-apikey-code">AIza</code>.
+                </a>.
               </p>
             </div>
 
-            {/* Status message */}
             {keyStatus && (
               <div className={`prof-apikey-status prof-apikey-status--${keyStatus.type}`}>
                 {keyStatus.type === 'success' ? '✓ ' : '✕ '}{keyStatus.msg}
               </div>
             )}
 
-            {/* Save button */}
             <Button
               id="save-api-key-btn"
               onClick={handleSaveKey}
@@ -251,6 +304,75 @@ export default function Profile() {
               className="prof-apikey-save-btn"
             >
               {keySaving ? 'Saving…' : hasCustomKey ? 'Update Key' : 'Save Key'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Gemini Model Selector */}
+        <Card className="prof-user-card">
+          <CardHeader>
+            <div className="prof-apikey-header">
+              <CardTitle className="prof-card-title">Gemini Model</CardTitle>
+              <span className="prof-model-badge">
+                {GEMINI_MODELS.find(m => m.id === savedModel)?.label || 'System Default'}
+              </span>
+            </div>
+            <p className="prof-apikey-desc">
+              Choose which Gemini model powers your mock interviews. Pro models produce richer feedback but consume more quota.
+            </p>
+          </CardHeader>
+          <CardContent className="prof-model-content">
+            <div className="prof-model-grid" role="radiogroup" aria-label="Gemini model selection">
+              {GEMINI_MODELS.map(m => (
+                <label
+                  key={m.id}
+                  htmlFor={`model-${m.id}`}
+                  className={`prof-model-option ${selectedModel === m.id ? 'prof-model-option--selected' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    id={`model-${m.id}`}
+                    name="geminiModel"
+                    value={m.id}
+                    checked={selectedModel === m.id}
+                    onChange={() => { setSelectedModel(m.id); setModelStatus(null) }}
+                    className="prof-model-radio"
+                  />
+                  <div className="prof-model-info">
+                    <div className="prof-model-name-row">
+                      <span className="prof-model-name">{m.label}</span>
+                      {m.badge && (
+                        <span className={`prof-model-pill prof-model-pill--${m.badge.toLowerCase()}`}>
+                          {m.badge}
+                        </span>
+                      )}
+                      {savedModel === m.id && (
+                        <span className="prof-model-saved-dot" title="Currently saved" />
+                      )}
+                    </div>
+                    <span className="prof-model-desc">{m.desc}</span>
+                    {m.id !== 'default' && (
+                      <code className="prof-model-id">{m.name}</code>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {modelStatus && (
+              <div className={`prof-apikey-status prof-apikey-status--${modelStatus.type}`}>
+                {modelStatus.type === 'success' ? '✓ ' : '✕ '}{modelStatus.msg}
+              </div>
+            )}
+
+            <Button
+              id="save-gemini-model-btn"
+              onClick={handleSaveModel}
+              disabled={modelSaving || !modelChanged}
+              size="sm"
+              className="prof-apikey-save-btn"
+            >
+              {modelSaving ? 'Saving…' : modelChanged ? 'Apply Model' : 'Model Saved'}
             </Button>
           </CardContent>
         </Card>
