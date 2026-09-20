@@ -1,12 +1,17 @@
 const { GoogleGenAI } = require("@google/genai");
 
-// Initialize the Gemini client once — reused across all calls
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// NOTE: We no longer initialize a global GoogleGenAI client here.
+// Each function creates its own instance so it can accept a per-user API key.
+// Falls back to the system GEMINI_API_KEY env variable when no custom key is provided.
 
-const gemini_model = "gemini-3.5-flash";
+const gemini_model = "gemini-2.5-flash";
 
 // ─── generateFirstQuestion ─────────────────────────────────────────────────────
 // Sends candidate context to Gemini and returns a structured first question.
+//
+// Parameters:
+//   resume, role, difficulty, questionCount, duration — interview context
+//   apiKey — optional custom API key; falls back to GEMINI_API_KEY env var
 //
 // Returns:
 //   { question: string, topic: string, difficulty: string }
@@ -14,7 +19,8 @@ const gemini_model = "gemini-3.5-flash";
 // Throws:
 //   Error — if Gemini fails or returns malformed data
 // ──────────────────────────────────────────────────────────────────────────────
-async function generateFirstQuestion({ resume, role, difficulty, questionCount, duration }) {
+async function generateFirstQuestion({ resume, role, difficulty, questionCount, duration, apiKey }) {
+  const ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY });
 
   // ── System instruction: how the AI should behave ──────────────────────────
   const systemInstruction = `You are a professional technical interviewer conducting a mock interview.
@@ -99,7 +105,8 @@ Generate the first interview question now.`;
 // Analyzes the conversation history and candidate's latest answer, then
 // decides whether to follow up or move to a new topic, returning the next question.
 // ──────────────────────────────────────────────────────────────────────────────
-async function generateNextQuestion({ resume, role, difficulty, questionCount, questionsAsked, conversation }) {
+async function generateNextQuestion({ resume, role, difficulty, questionCount, questionsAsked, conversation, apiKey }) {
+  const ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY });
   const systemInstruction = `You are a professional technical interviewer conducting a realistic short interview.
 
 Your job is to determine the single best next question for the candidate based on everything that has happened in the interview so far.
@@ -207,7 +214,8 @@ Do NOT include any text outside the JSON. Do NOT wrap it in markdown code fences
 // ─── generateInterviewFeedback ────────────────────────────────────────────────
 // Evaluates the completed or cancelled interview and returns structured feedback.
 // ──────────────────────────────────────────────────────────────────────────────
-async function generateInterviewFeedback({ resume, role, difficulty, questionCount, status, conversation }) {
+async function generateInterviewFeedback({ resume, role, difficulty, questionCount, status, conversation, apiKey }) {
+  const ai = new GoogleGenAI({ apiKey: apiKey || process.env.GEMINI_API_KEY });
   const systemInstruction = `You are an expert technical interview evaluator.
 
 Evaluate a candidate's mock interview based ONLY on evidence present in the provided resume and conversation.

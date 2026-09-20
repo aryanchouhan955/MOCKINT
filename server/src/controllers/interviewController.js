@@ -1,6 +1,21 @@
 const mongoose = require("mongoose");
 const Interview = require("../models/Interview");
+const User = require("../models/User");
+const { decrypt } = require("../utils/encryption");
 const { generateFirstQuestion, generateNextQuestion, generateInterviewFeedback } = require("../services/geminiService");
+
+// ─── Helper: fetch & decrypt the user's custom Gemini API key ─────────────────
+// Returns the plain-text API key string, or null if the user has none saved.
+async function getUserApiKey(userId) {
+  try {
+    const user = await User.findById(userId).select("geminiApiKey").lean();
+    if (!user || !user.geminiApiKey) return null;
+    return decrypt(user.geminiApiKey);
+  } catch {
+    // Decryption failure (e.g. rotated ENCRYPTION_KEY) — fall back to system key
+    return null;
+  }
+}
 
 // ─── GET /api/interviews ──────────────────────────────────────────────────────
 // Returns summary metadata for the authenticated user's interviews only.
@@ -197,7 +212,10 @@ const createInterview = async (req, res) => {
     // ── 7. Get authenticated user's ID from JWT (never from req.body) ────────
     const userId = req.user.userId;
 
-    // ── 8. Call Gemini BEFORE creating the interview document ────────────────
+    // ── 8. Resolve API key: user's custom key if available, else system key ──
+    const customApiKey = await getUserApiKey(userId);
+
+    // ── 9. Call Gemini BEFORE creating the interview document ────────────────
     //    Reason: if Gemini fails, we don't want a half-created interview in DB
     let firstQuestion;
     try {
@@ -207,6 +225,7 @@ const createInterview = async (req, res) => {
         difficulty,
         questionCount: qCount,
         duration: dur,
+        apiKey: customApiKey,
       });
     } catch (geminiErr) {
       console.error("Gemini error:", geminiErr.message);
@@ -273,6 +292,9 @@ const submitAnswer = async (req, res) => {
     const interviewId = req.params.id;
     const { answer } = req.body;
     const userId = req.user.userId;
+
+    // Resolve the user's custom Gemini API key up-front
+    const customApiKey = await getUserApiKey(userId);
 
     // 0. Validate ObjectId format early to prevent Mongoose CastError crash
     if (!mongoose.Types.ObjectId.isValid(interviewId)) {
@@ -367,6 +389,7 @@ const submitAnswer = async (req, res) => {
           questionCount: interview.questionCount,
           questionsAsked: interview.questionsAsked,
           conversation: interview.conversation,
+          apiKey: customApiKey,
         });
 
         // Duplicate Check
@@ -449,6 +472,7 @@ const completeInterview = async (req, res) => {
     }
 
     // Call Gemini BEFORE saving status to DB to avoid inconsistent state on failure
+    const customApiKey = await getUserApiKey(userId);
     let feedback;
     try {
       feedback = await generateInterviewFeedback({
@@ -458,6 +482,7 @@ const completeInterview = async (req, res) => {
         questionCount: interview.questionCount,
         status: "completed",
         conversation: interview.conversation,
+        apiKey: customApiKey,
       });
     } catch (err) {
       console.error("Gemini feedback error:", err.message);
@@ -504,6 +529,7 @@ const cancelInterview = async (req, res) => {
     }
 
     // Call Gemini BEFORE saving status to DB to avoid inconsistent state on failure
+    const customApiKey = await getUserApiKey(userId);
     let feedback;
     try {
       feedback = await generateInterviewFeedback({
@@ -513,6 +539,7 @@ const cancelInterview = async (req, res) => {
         questionCount: interview.questionCount,
         status: "cancelled",
         conversation: interview.conversation,
+        apiKey: customApiKey,
       });
     } catch (err) {
       console.error("Gemini feedback error:", err.message);

@@ -29,6 +29,12 @@ const UserSchema = new mongoose.Schema(
     resume: {
       type: String,
     },
+    // Encrypted Gemini API key — stored as "iv:encryptedHex" via encryption utility
+    // Never stored or returned as plain text
+    geminiApiKey: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically

@@ -134,3 +134,161 @@
 .prof-stat-label {
   @apply text-xs text-muted-foreground mt-3 uppercase tracking-wider font-semibold;
 }
+
+/* ── API Key Card ─────────────────────────────────────────────────────────── */
+.prof-apikey-header {
+  @apply flex items-center gap-3 flex-wrap;
+}
+
+.prof-apikey-badge {
+  @apply text-xs font-semibold px-2.5 py-1 rounded-full border;
+  transition: all 0.2s ease;
+}
+
+.prof-apikey-badge--active {
+  background: hsl(142 70% 45% / 0.12);
+  border-color: hsl(142 70% 45% / 0.35);
+  color: hsl(142 60% 40%);
+}
+
+.dark .prof-apikey-badge--active {
+  background: hsl(142 70% 45% / 0.15);
+  border-color: hsl(142 70% 45% / 0.4);
+  color: hsl(142 70% 60%);
+}
+
+.prof-apikey-badge--system {
+  background: hsl(35 90% 55% / 0.1);
+  border-color: hsl(35 90% 55% / 0.3);
+  color: hsl(35 70% 40%);
+}
+
+.dark .prof-apikey-badge--system {
+  background: hsl(35 90% 55% / 0.12);
+  border-color: hsl(35 90% 55% / 0.35);
+  color: hsl(35 80% 65%);
+}
+
+.prof-apikey-desc {
+  @apply text-sm text-muted-foreground mt-2;
+  line-height: 1.6;
+}
+
+.prof-apikey-link {
+  @apply font-semibold underline underline-offset-2;
+  color: hsl(248 90% 66%);
+  text-decoration-color: hsl(248 90% 66% / 0.4);
+  transition: text-decoration-color 0.15s ease;
+}
+.prof-apikey-link:hover {
+  text-decoration-color: hsl(248 90% 66%);
+}
+
+.prof-apikey-content {
+  @apply space-y-5;
+}
+
+/* Current saved key row */
+.prof-apikey-current {
+  @apply flex flex-col gap-1.5;
+  padding: 0.75rem 1rem;
+  border-radius: 0.625rem;
+  background: hsl(142 70% 45% / 0.06);
+  border: 1px solid hsl(142 70% 45% / 0.2);
+}
+
+.prof-apikey-masked {
+  @apply flex items-center justify-between gap-3;
+}
+
+.prof-apikey-masked-val {
+  @apply text-sm font-mono font-semibold tracking-wider;
+  color: hsl(var(--foreground));
+  letter-spacing: 0.08em;
+}
+
+.prof-apikey-remove-btn {
+  @apply text-xs h-7 px-2.5;
+  color: hsl(0 70% 55%);
+  transition: background 0.15s ease;
+}
+.prof-apikey-remove-btn:hover {
+  background: hsl(0 70% 55% / 0.08);
+}
+
+/* Input area */
+.prof-apikey-field {
+  @apply flex flex-col gap-2;
+}
+
+.prof-apikey-input-row {
+  @apply flex items-center gap-2;
+}
+
+.prof-apikey-input {
+  @apply flex-1 h-10 text-sm rounded-lg px-3 font-mono;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.04em;
+}
+.prof-apikey-input:focus {
+  border-color: hsl(248 90% 66% / 0.6);
+  box-shadow: 0 0 0 3px hsl(248 90% 66% / 0.12);
+}
+.prof-apikey-input::placeholder {
+  color: hsl(var(--muted-foreground));
+  letter-spacing: normal;
+  opacity: 0.7;
+}
+
+.prof-apikey-toggle {
+  @apply flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg border;
+  border-color: hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.prof-apikey-toggle:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+  border-color: hsl(248 90% 66% / 0.4);
+}
+
+.prof-apikey-hint {
+  @apply text-xs text-muted-foreground;
+}
+
+.prof-apikey-code {
+  @apply font-mono text-xs px-1 py-0.5 rounded;
+  background: hsl(var(--muted));
+  color: hsl(248 90% 66%);
+}
+
+/* Status messages */
+.prof-apikey-status {
+  @apply text-sm font-medium px-3.5 py-2.5 rounded-lg border;
+}
+.prof-apikey-status--success {
+  background: hsl(142 70% 45% / 0.08);
+  border-color: hsl(142 70% 45% / 0.25);
+  color: hsl(142 60% 38%);
+}
+.dark .prof-apikey-status--success {
+  color: hsl(142 70% 60%);
+}
+.prof-apikey-status--error {
+  background: hsl(0 70% 55% / 0.08);
+  border-color: hsl(0 70% 55% / 0.25);
+  color: hsl(0 65% 45%);
+}
+.dark .prof-apikey-status--error {
+  color: hsl(0 70% 65%);
+}
+
+.prof-apikey-save-btn {
+  @apply self-start;
+}

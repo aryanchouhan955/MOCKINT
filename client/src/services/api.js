@@ -179,3 +179,31 @@ export async function fetchSTTToken(token) {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+// ─── User API Key Management ──────────────────────────────────────────────────
+
+/**
+ * POST /users/apikey — encrypts and saves a Gemini API key to the user's profile.
+ * The plain-text key is never stored — only an AES-256-CBC encrypted form.
+ * @param {string} apiKey   The user's plain-text Gemini API key
+ * @param {string} token    JWT auth token
+ */
+export async function saveApiKey(apiKey, token) {
+  return apiFetch('/users/apikey', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ apiKey }),
+  })
+}
+
+/**
+ * DELETE /users/apikey — removes the user's custom Gemini API key.
+ * Subsequent interviews will fall back to the system key.
+ * @param {string} token    JWT auth token
+ */
+export async function deleteApiKey(token) {
+  return apiFetch('/users/apikey', {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+}
